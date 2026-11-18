@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { Award } from "lucide-react";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { EXAM_TERM_LABELS } from "@/lib/constants";
+import { EXAM_TERM_LABELS, EXAM_TERM_OPTIONS } from "@/lib/constants";
 import { calculateAcademicStanding, percentageToLetterGrade } from "@/lib/academics";
+import type { AcademicRecordItem, StudentDomainRecord } from "@/lib/domain-types";
 
 interface StudentGradesTabProps {
-  student: any;
+  student: StudentDomainRecord;
 }
 
 export function StudentGradesTab({ student }: StudentGradesTabProps) {
   const [termFilter, setTermFilter] = useState("all");
 
-  const allRecords: any[] = Array.isArray(student.academicRecords) ? student.academicRecords : [];
+  const allRecords: AcademicRecordItem[] = Array.isArray(student.academicRecords)
+    ? student.academicRecords
+    : [];
   const filteredRecords =
     termFilter === "all"
       ? allRecords
@@ -41,26 +44,11 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
                 onChange={setTermFilter}
                 options={[
                   { value: "all", label: "All Terms Combined", badge: `${allRecords.length}` },
-                  {
-                    value: "first_term",
-                    label: "First Term Exam",
-                    badge: `${allRecords.filter((r) => (r.term || "first_term") === "first_term").length}`,
-                  },
-                  {
-                    value: "mid_term",
-                    label: "2nd / Mid-Term Exam",
-                    badge: `${allRecords.filter((r) => r.term === "mid_term").length}`,
-                  },
-                  {
-                    value: "final_term",
-                    label: "Final Term Exam",
-                    badge: `${allRecords.filter((r) => r.term === "final_term").length}`,
-                  },
-                  {
-                    value: "class_test",
-                    label: "Class Tests",
-                    badge: `${allRecords.filter((r) => r.term === "class_test").length}`,
-                  },
+                  ...EXAM_TERM_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                    badge: `${allRecords.filter((r) => (r.term || "first_term") === o.value).length}`,
+                  })),
                 ]}
                 size="sm"
               />
@@ -68,11 +56,10 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
 
             {standing.hasRecords && (
               <div
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                  standing.passed
-                    ? "text-emerald-600 bg-emerald-500/10"
-                    : "text-destructive bg-destructive/10"
-                }`}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${standing.passed
+                  ? "text-emerald-600 bg-emerald-500/10"
+                  : "text-destructive bg-destructive/10"
+                  }`}
               >
                 {standing.overallPct}% • Grade {standing.letterGrade} (
                 {standing.passed ? "Passed" : "Needs Attention"})
@@ -97,7 +84,7 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filteredRecords.map((rec: any, idx: number) => {
+                  {filteredRecords.map((rec, idx) => {
                     const isAbsent = rec.examStatus === "absent";
                     const total = Number(rec.totalMarks || 100);
                     const obtained = isAbsent ? 0 : Number(rec.obtainedMarks || 0);
@@ -130,9 +117,8 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
                         </td>
                         <td className="py-3.5 px-4">
                           <span
-                            className={`font-bold ${
-                              isAbsent || !isPass ? "text-destructive" : "text-primary"
-                            }`}
+                            className={`font-bold ${isAbsent || !isPass ? "text-destructive" : "text-primary"
+                              }`}
                           >
                             {grade}
                           </span>
@@ -140,20 +126,18 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
                         <td className="py-3.5 px-4 w-44">
                           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                             <div
-                              className={`h-full rounded-full transition-all ${
-                                isAbsent || !isPass ? "bg-destructive" : "bg-primary"
-                              }`}
+                              className={`h-full rounded-full transition-all ${isAbsent || !isPass ? "bg-destructive" : "bg-primary"
+                                }`}
                               style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
                             />
                           </div>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              isPass
-                                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                                : "bg-destructive/15 text-destructive"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${isPass
+                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                              : "bg-destructive/15 text-destructive"
+                              }`}
                           >
                             {isAbsent ? "ABSENT" : isPass ? "PASS" : "FAIL"}
                           </span>
@@ -172,7 +156,7 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
                 Teacher Formative Evaluations &amp; Remarks
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filteredRecords.map((rec: any, i: number) => {
+                {filteredRecords.map((rec, i) => {
                   const isAbsent = rec.examStatus === "absent";
                   const isPass =
                     !isAbsent &&
@@ -185,19 +169,17 @@ export function StudentGradesTab({ student }: StudentGradesTabProps) {
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-xs text-foreground">{rec.subject}</span>
                           <span
-                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                              isAbsent
-                                ? "bg-destructive/15 text-destructive"
-                                : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                            }`}
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${isAbsent
+                              ? "bg-destructive/15 text-destructive"
+                              : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                              }`}
                           >
                             {isAbsent ? "Absent" : "Present"}
                           </span>
                         </div>
                         <span
-                          className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                            isPass ? "bg-emerald-600 text-white" : "bg-destructive text-white"
-                          }`}
+                          className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${isPass ? "bg-emerald-600 text-white" : "bg-destructive text-white"
+                            }`}
                         >
                           {isAbsent ? "ABSENT" : isPass ? "PASS" : "FAIL"}
                         </span>

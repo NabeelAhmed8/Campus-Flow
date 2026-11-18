@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
-import { Student, ExamTerm, ExamAttendanceStatus, ExamResultStatus } from "@/models/Student";
+import {
+  Student,
+  type IAcademicRecord,
+  type IStudent,
+  ExamTerm,
+  ExamAttendanceStatus,
+  ExamResultStatus,
+} from "@/models/Student";
 import { buildTeacherClassFilter, isStudentInTeacherScope, requireAuth } from "@/lib/auth";
+import { percentageToLetterGrade } from "@/lib/academics";
+import { EXAM_TERM_LABELS } from "@/lib/constants";
 
 const VALID_TERMS: readonly ExamTerm[] = [
   "first_term",
@@ -12,9 +21,9 @@ const VALID_TERMS: readonly ExamTerm[] = [
 ];
 
 const TERM_LABELS: Record<ExamTerm, string> = {
-  first_term: "First Term Exam",
-  mid_term: "2nd / Mid-Term Exam",
-  final_term: "Final Term Exam",
+  first_term: EXAM_TERM_LABELS.first_term,
+  mid_term: EXAM_TERM_LABELS.mid_term,
+  final_term: EXAM_TERM_LABELS.final_term,
   class_test: "Class Test / Assessment",
 };
 
@@ -55,13 +64,21 @@ export async function GET(req: Request) {
       query.$or = classFilters;
     }
 
-    const students: any[] = await Student.find(query).lean().sort({ createdAt: -1 });
+    const students = await Student.find(query)
+      .lean<Array<Pick<IStudent, "_id" | "name" | "rollNumber" | "grade" | "section" | "academicRecords">>>()
+      .sort({ createdAt: -1 });
 
-    // Flatten records for easy display
-    const allRecords: any[] = [];
-    students.forEach((st: any) => {
+    interface FlattenedGradeRecord extends IAcademicRecord {
+      studentId: string;
+      studentName: string;
+      rollNumber: string;
+      classSection: string;
+    }
+
+    const allRecords: FlattenedGradeRecord[] = [];
+    students.forEach((st) => {
       if (Array.isArray(st.academicRecords)) {
-        st.academicRecords.forEach((rec: any) => {
+        st.academicRecords.forEach((rec) => {
           const examStatus: ExamAttendanceStatus =
             rec.examStatus === "absent" ? "absent" : "present";
           const pct = Number(rec.percentage || 0);
@@ -70,8 +87,8 @@ export async function GET(req: Request) {
             (examStatus === "absent"
               ? "absent"
               : pct >= PASSING_PERCENTAGE
-              ? "pass"
-              : "fail");
+                ? "pass"
+                : "fail");
 
           allRecords.push({
             ...rec,
@@ -186,20 +203,7 @@ export async function POST(req: Request) {
       }
 
       percentage = Math.round((obtained / total) * 100);
-      grade =
-        percentage >= 90
-          ? "A+"
-          : percentage >= 80
-          ? "A"
-          : percentage >= 70
-          ? "B+"
-          : percentage >= 60
-          ? "B"
-          : percentage >= 50
-          ? "C"
-          : percentage >= 40
-          ? "D"
-          : "F";
+      grade = percentageToLetterGrade(percentage);
       resultStatus = percentage >= PASSING_PERCENTAGE ? "pass" : "fail";
     }
 

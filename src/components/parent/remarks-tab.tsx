@@ -3,25 +3,31 @@
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { EXAM_TERM_LABELS } from "@/lib/constants";
+import { EXAM_TERM_LABELS, EXAM_TERM_OPTIONS } from "@/lib/constants";
 import { formatReadableDate } from "@/lib/format";
+import type {
+  AcademicRecordItem,
+  BroadcastNotificationItem,
+  StudentDomainRecord,
+} from "@/lib/domain-types";
 import type { RemarksTermKey } from "./types";
 
 interface ParentRemarksTabProps {
-  student: any;
+  student: StudentDomainRecord;
 }
 
 export function ParentRemarksTab({ student }: ParentRemarksTabProps) {
   const [selectedRemarksTerm, setSelectedRemarksTerm] = useState<RemarksTermKey>("first_term");
-  const [liveNotices, setLiveNotices] = useState<any[]>([]);
+  const [liveNotices, setLiveNotices] = useState<BroadcastNotificationItem[]>([]);
 
   useEffect(() => {
     fetch("/api/notifications", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (d?.success && Array.isArray(d.notifications)) {
-          const advisories = d.notifications
-            .filter((n: any) => ["announcement", "circular", "urgent"].includes(n.category))
+          const notifications = d.notifications as BroadcastNotificationItem[];
+          const advisories = notifications
+            .filter((n) => ["announcement", "circular", "urgent"].includes(n.category))
             .slice(0, 4);
           setLiveNotices(advisories);
         }
@@ -29,8 +35,10 @@ export function ParentRemarksTab({ student }: ParentRemarksTabProps) {
       .catch(() => {});
   }, []);
 
-  const allRemarks: any[] = Array.isArray(student.academicRecords) ? student.academicRecords : [];
-  const getRecordTerm = (rec: any) => rec.term || "first_term";
+  const allRemarks: AcademicRecordItem[] = Array.isArray(student.academicRecords)
+    ? student.academicRecords
+    : [];
+  const getRecordTerm = (rec: AcademicRecordItem) => rec.term || "first_term";
   const countByTerm = (termKey: string) =>
     allRemarks.filter((r) => getRecordTerm(r) === termKey).length;
 
@@ -64,26 +72,11 @@ export function ParentRemarksTab({ student }: ParentRemarksTabProps) {
               value={selectedRemarksTerm}
               onChange={(val) => setSelectedRemarksTerm(val as RemarksTermKey)}
               options={[
-                {
-                  value: "first_term",
-                  label: "First Term Exam",
-                  badge: String(countByTerm("first_term")),
-                },
-                {
-                  value: "mid_term",
-                  label: "2nd / Mid-Term Exam",
-                  badge: String(countByTerm("mid_term")),
-                },
-                {
-                  value: "final_term",
-                  label: "Final Term Exam",
-                  badge: String(countByTerm("final_term")),
-                },
-                {
-                  value: "class_test",
-                  label: "Class Tests",
-                  badge: String(countByTerm("class_test")),
-                },
+                ...EXAM_TERM_OPTIONS.map((o) => ({
+                  value: o.value,
+                  label: o.label,
+                  badge: String(countByTerm(o.value)),
+                })),
                 {
                   value: "all",
                   label: "All Terms Combined",
@@ -103,7 +96,7 @@ export function ParentRemarksTab({ student }: ParentRemarksTabProps) {
       {/* Term-Filtered Teacher Assessment Remarks (Internal Vertical Scroll) */}
       {filteredRemarks.length > 0 ? (
         <div className="max-h-[420px] overflow-y-auto pr-1.5 space-y-3">
-          {filteredRemarks.map((rec: any, idx: number) => {
+          {filteredRemarks.map((rec, idx) => {
             const recTerm = getRecordTerm(rec);
             const isAbsent = rec.examStatus === "absent";
             return (

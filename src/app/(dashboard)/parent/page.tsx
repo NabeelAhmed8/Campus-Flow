@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
   GraduationCap,
   Receipt,
@@ -12,20 +11,19 @@ import {
   Users,
   UserPlus,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { CampusDocumentsPanel } from "@/components/campus-documents-panel";
-import { generateFeeVoucherPDF } from "@/lib/pdf-generator";
 import { usePortalTab } from "@/hooks/use-portal-tab";
+import { useParentPortal } from "@/hooks/use-parent-portal";
 import { ParentOverviewTab } from "@/components/parent/overview-tab";
 import { ParentExamResultsTab } from "@/components/parent/exam-results-tab";
 import { ParentFeePayTab } from "@/components/parent/fee-pay-tab";
 import { ParentRemarksTab } from "@/components/parent/remarks-tab";
 import { ParentLeaveTab } from "@/components/parent/leave-tab";
 import { ParentBankPaymentModal, LinkChildModal } from "@/components/parent/parent-modals";
-import type { ParentTab, SchoolBankAccount } from "@/components/parent/types";
+import type { ParentTab } from "@/components/parent/types";
 
 const PARENT_TABS: readonly ParentTab[] = [
   "overview",
@@ -38,202 +36,8 @@ const PARENT_TABS: readonly ParentTab[] = [
 
 export default function ParentPage() {
   const [activeTab, switchTab] = usePortalTab<ParentTab>(PARENT_TABS, "overview");
-
-  const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState<any[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [feeRecord, setFeeRecord] = useState<any | null>(null);
-  const [bankAccounts, setBankAccounts] = useState<SchoolBankAccount[]>([]);
-  const [attendanceStats, setAttendanceStats] = useState<any>(null);
-  const [institutionName, setInstitutionName] = useState("CampusFlow");
-
-  // Bank Transfer Proof Modal State
-  const [showBankModal, setShowBankModal] = useState(false);
-  const [selectedBankId, setSelectedBankId] = useState("");
-  const [customChannel, setCustomChannel] = useState("");
-  const [depositorName, setDepositorName] = useState("");
-  const [trxRef, setTrxRef] = useState("");
-  const [submittingPayment, setSubmittingPayment] = useState(false);
-
-  // Link Another Child Modal State
-  const [showLinkChildModal, setShowLinkChildModal] = useState(false);
-  const [childRollInput, setChildRollInput] = useState("");
-  const [linkingChild, setLinkingChild] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const syncInst = () => {
-      const saved = localStorage.getItem("campusflow_institution");
-      if (saved) setInstitutionName(saved);
-    };
-    syncInst();
-    window.addEventListener("campusflow_institution_updated", syncInst);
-    return () => window.removeEventListener("campusflow_institution_updated", syncInst);
-  }, []);
-
-  const fetchParentData = async () => {
-    try {
-      setLoading(true);
-      const [studentsRes, feesRes, banksRes] = await Promise.all([
-        fetch("/api/students", { cache: "no-store" }).then((r) => r.json()).catch(() => null),
-        fetch("/api/fees", { cache: "no-store" }).then((r) => r.json()).catch(() => null),
-        fetch("/api/school/bank-accounts", { cache: "no-store" })
-          .then((r) => r.json())
-          .catch(() => null),
-      ]);
-
-      if (banksRes?.success && Array.isArray(banksRes.bankAccounts)) {
-        setBankAccounts(banksRes.bankAccounts);
-        if (banksRes.bankAccounts.length > 0 && !selectedBankId) {
-          setSelectedBankId(banksRes.bankAccounts[0].id);
-        }
-      }
-
-      const studentList =
-        studentsRes?.success && Array.isArray(studentsRes.students) ? studentsRes.students : [];
-      setStudents(studentList);
-
-      if (studentList.length > 0) {
-        const currentStudent = studentList[selectedIndex] || studentList[0];
-        const matchFee =
-          feesRes?.fees?.find((f: any) => f.rollNumber === currentStudent.rollNumber) || null;
-        setFeeRecord(matchFee);
-        if (currentStudent.guardianName || currentStudent.guardian) {
-          setDepositorName(currentStudent.guardianName || currentStudent.guardian);
-        }
-      } else {
-        setFeeRecord(null);
-      }
-    } catch {
-      toast.error("Failed to load student records");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchParentData();
-  }, [selectedIndex]);
-
-  const activeStudent = students[selectedIndex] || null;
-
-  useEffect(() => {
-    if (activeStudent?._id) {
-      fetch(`/api/attendance?studentId=${activeStudent._id}`, { cache: "no-store" })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.success && d.stats) setAttendanceStats(d.stats);
-        })
-        .catch(() => { });
-    }
-  }, [activeStudent?._id]);
-
-  const handleLinkAnotherChild = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!childRollInput.trim()) {
-      toast.error("Please enter your child's Roll Number.");
-      return;
-    }
-
-    setLinkingChild(true);
-    try {
-      const res = await fetch("/api/parent/link-child", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rollNumber: childRollInput.trim().toUpperCase() }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        toast.error(data.error || "Unable to link child.");
-        return;
-      }
-
-      toast.success(data.message || "Child linked successfully!");
-      setShowLinkChildModal(false);
-      setChildRollInput("");
-      const nextIdx = students.length;
-      await fetchParentData();
-      setSelectedIndex(nextIdx);
-    } catch {
-      toast.error("Unable to reach the server. Please try again.");
-    } finally {
-      setLinkingChild(false);
-    }
-  };
-
-  const handleDownloadVoucher = () => {
-    if (!activeStudent || !feeRecord) {
-      toast.error("No active fee voucher available for download.");
-      return;
-    }
-
-    try {
-      const doc = generateFeeVoucherPDF({
-        invoiceNumber: feeRecord.invoiceNumber || `INV-${activeStudent.rollNumber}`,
-        studentName: activeStudent.name,
-        rollNumber: activeStudent.rollNumber,
-        grade: `${activeStudent.grade} - ${activeStudent.section}`,
-        month: feeRecord.month || "Current Term",
-        amount: feeRecord.amount ?? activeStudent.monthlyFee ?? 0,
-        dueDate: feeRecord.dueDate
-          ? new Date(feeRecord.dueDate).toISOString().split("T")[0]
-          : "N/A",
-        status: feeRecord.status || "pending",
-        institution: institutionName,
-        paymentMethod: feeRecord.paymentMethod,
-        transactionRef: feeRecord.transactionRef,
-        bankAccounts,
-      });
-      doc.save(`Voucher-${activeStudent.rollNumber}.pdf`);
-      toast.success("Fee voucher downloaded successfully.");
-    } catch {
-      toast.error("Failed to generate voucher PDF.");
-    }
-  };
-
-  const handleSubmitBankProof = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!feeRecord?._id) return;
-
-    if (trxRef.trim().length < 4) {
-      toast.error("Please enter your real Bank Transaction Reference / Deposit Slip ID.");
-      return;
-    }
-
-    const chosenBank =
-      bankAccounts.find((b) => b.id === selectedBankId) || bankAccounts[0] || null;
-    const channelName = chosenBank?.bankName || customChannel.trim() || "Bank Transfer";
-
-    setSubmittingPayment(true);
-    try {
-      const res = await fetch("/api/fees", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: feeRecord._id,
-          paymentMethod: channelName,
-          transactionRef: trxRef.trim(),
-          depositorName: depositorName.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success && data.fee) {
-        setFeeRecord(data.fee);
-        setShowBankModal(false);
-        setTrxRef("");
-        toast.success(
-          data.message ||
-          "Transfer proof submitted! Fee will clear once School Administration verifies it."
-        );
-      } else {
-        toast.error(data.error || "Failed to submit transfer proof.");
-      }
-    } catch {
-      toast.error("Network error while submitting bank transfer proof.");
-    } finally {
-      setSubmittingPayment(false);
-    }
-  };
+  const portal = useParentPortal();
+  const { activeStudent, feeRecord, students, loading } = portal;
 
   return (
     <div className="space-y-6">
@@ -245,7 +49,7 @@ export default function ParentPage() {
               Parent Portal &amp; Student Progress
             </h1>
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
-              {institutionName}
+              {portal.institutionName}
             </span>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -256,7 +60,7 @@ export default function ParentPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowLinkChildModal(true)}
+            onClick={() => portal.setShowLinkChildModal(true)}
             className="text-xs font-semibold"
           >
             <UserPlus className="h-3.5 w-3.5 mr-1.5 text-primary" />
@@ -265,7 +69,7 @@ export default function ParentPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchParentData}
+            onClick={portal.fetchParentData}
             disabled={loading}
             title="Refresh Records"
           >
@@ -292,9 +96,9 @@ export default function ParentPage() {
           <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
           <h2 className="text-lg font-bold text-foreground">No Linked Children Found</h2>
           <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-6">
-            Link your child using the Roll Number issued by {institutionName} to view their attendance, fee vouchers, and teacher remarks.
+            Link your child using the Roll Number issued by {portal.institutionName} to view their attendance, fee vouchers, and teacher remarks.
           </p>
-          <Button size="sm" onClick={() => setShowLinkChildModal(true)}>
+          <Button size="sm" onClick={() => portal.setShowLinkChildModal(true)}>
             <UserPlus className="mr-1.5 h-4 w-4" /> Link Child by Roll Number
           </Button>
         </div>
@@ -313,10 +117,10 @@ export default function ParentPage() {
               </div>
               <div className="w-full sm:w-80">
                 <CustomSelect
-                  value={students[selectedIndex]?._id || ""}
+                  value={students[portal.selectedIndex]?._id || ""}
                   onChange={(val) => {
                     const idx = students.findIndex((s) => s._id === val);
-                    if (idx !== -1) setSelectedIndex(idx);
+                    if (idx !== -1) portal.setSelectedIndex(idx);
                   }}
                   options={students.map((st) => ({
                     value: st._id,
@@ -341,8 +145,8 @@ export default function ParentPage() {
                 shortLabel: "Results",
                 icon: Award,
                 badge:
-                  Array.isArray(activeStudent?.academicRecords) &&
-                    activeStudent.academicRecords.length > 0
+                  Array.isArray(activeStudent.academicRecords) &&
+                  activeStudent.academicRecords.length > 0
                     ? activeStudent.academicRecords.length
                     : null,
               },
@@ -364,8 +168,8 @@ export default function ParentPage() {
                 shortLabel: "Remarks",
                 icon: Bell,
                 badge:
-                  Array.isArray(activeStudent?.academicRecords) &&
-                    activeStudent.academicRecords.length > 0
+                  Array.isArray(activeStudent.academicRecords) &&
+                  activeStudent.academicRecords.length > 0
                     ? activeStudent.academicRecords.length
                     : null,
               },
@@ -377,7 +181,7 @@ export default function ParentPage() {
             <ParentOverviewTab
               student={activeStudent}
               feeRecord={feeRecord}
-              attendanceStats={attendanceStats}
+              attendanceStats={portal.attendanceStats}
               onSwitchTab={switchTab}
             />
           )}
@@ -388,9 +192,9 @@ export default function ParentPage() {
             <ParentFeePayTab
               student={activeStudent}
               feeRecord={feeRecord}
-              bankAccounts={bankAccounts}
-              onDownloadVoucher={handleDownloadVoucher}
-              onOpenBankModal={() => setShowBankModal(true)}
+              bankAccounts={portal.bankAccounts}
+              onDownloadVoucher={portal.handleDownloadVoucher}
+              onOpenBankModal={() => portal.setShowBankModal(true)}
             />
           )}
 
@@ -413,31 +217,31 @@ export default function ParentPage() {
 
       {/* Modals */}
       <ParentBankPaymentModal
-        open={showBankModal}
+        open={portal.showBankModal}
         feeRecord={feeRecord}
         studentMonthlyFee={activeStudent?.monthlyFee}
-        bankAccounts={bankAccounts}
-        selectedBankId={selectedBankId}
-        customChannel={customChannel}
-        depositorName={depositorName}
-        trxRef={trxRef}
-        submitting={submittingPayment}
-        onSelectBank={setSelectedBankId}
-        onCustomChannelChange={setCustomChannel}
-        onDepositorChange={setDepositorName}
-        onTrxRefChange={setTrxRef}
-        onSubmit={handleSubmitBankProof}
-        onClose={() => setShowBankModal(false)}
+        bankAccounts={portal.bankAccounts}
+        selectedBankId={portal.selectedBankId}
+        customChannel={portal.customChannel}
+        depositorName={portal.depositorName}
+        trxRef={portal.trxRef}
+        submitting={portal.submittingPayment}
+        onSelectBank={portal.setSelectedBankId}
+        onCustomChannelChange={portal.setCustomChannel}
+        onDepositorChange={portal.setDepositorName}
+        onTrxRefChange={portal.setTrxRef}
+        onSubmit={portal.handleSubmitBankProof}
+        onClose={() => portal.setShowBankModal(false)}
       />
 
       <LinkChildModal
-        open={showLinkChildModal}
-        institutionName={institutionName}
-        childRollInput={childRollInput}
-        linking={linkingChild}
-        onRollChange={setChildRollInput}
-        onSubmit={handleLinkAnotherChild}
-        onClose={() => setShowLinkChildModal(false)}
+        open={portal.showLinkChildModal}
+        institutionName={portal.institutionName}
+        childRollInput={portal.childRollInput}
+        linking={portal.linkingChild}
+        onRollChange={portal.setChildRollInput}
+        onSubmit={portal.handleLinkAnotherChild}
+        onClose={() => portal.setShowLinkChildModal(false)}
       />
     </div>
   );

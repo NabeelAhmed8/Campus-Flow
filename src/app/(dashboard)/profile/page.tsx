@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { clearClientAuthStorage, syncClientAuthStorage } from "@/lib/client-auth";
+import { getInitials } from "@/lib/format";
 import { PROFILE_ROLE_META, type ProfileData } from "@/components/profile/types";
 import { ProfileHeroCard } from "@/components/profile/profile-hero-card";
 import { ProfileDetailsCard } from "@/components/profile/profile-details-card";
@@ -81,14 +83,7 @@ export default function ProfilePage() {
       setInstitution(data.profile.institution);
       setExtraField(data.profile.extraField || "");
 
-      if (typeof window !== "undefined") {
-        localStorage.setItem("campusflow_user_name", data.profile.name);
-        localStorage.setItem("campusflow_institution", data.profile.institution);
-        if (data.profile.role === "admin") {
-          localStorage.setItem("campusflow_admin_name", data.profile.name);
-        }
-        window.dispatchEvent(new Event("campusflow_institution_updated"));
-      }
+      syncClientAuthStorage(data.profile);
 
       toast.success("Profile updated successfully.");
     } catch {
@@ -105,11 +100,7 @@ export default function ProfilePage() {
       // Proceed with cleanup
     }
     if (typeof window !== "undefined") {
-      localStorage.removeItem("campusflow_user_role");
-      localStorage.removeItem("campusflow_user_name");
-      localStorage.removeItem("campusflow_user_email");
-      localStorage.removeItem("campusflow_institution");
-      localStorage.removeItem("campusflow_admin_name");
+      clearClientAuthStorage();
       window.location.href = "/login";
     }
   };
@@ -118,20 +109,13 @@ export default function ProfilePage() {
     ? PROFILE_ROLE_META[profile.role] || PROFILE_ROLE_META.admin
     : PROFILE_ROLE_META.admin;
 
-  const initials =
-    (profile?.name || name || "CF")
-      .split(" ")
-      .filter(Boolean)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "CF";
+  const initials = getInitials(profile?.name || name, "CF");
 
   const hasProfileChanges = Boolean(
     profile &&
-      (name.trim() !== (profile.name || "") ||
-        institution.trim() !== (profile.institution || "") ||
-        extraField.trim() !== (profile.extraField || ""))
+    (name.trim() !== (profile.name || "") ||
+      institution.trim() !== (profile.institution || "") ||
+      extraField.trim() !== (profile.extraField || ""))
   );
 
   if (loading) {

@@ -8,18 +8,27 @@ import {
   AlertCircle,
   Clock,
   UserCheck,
-  Loader2,
-  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { toIsoDate } from "@/lib/format";
+import type { StudentDomainRecord } from "@/lib/domain-types";
+import { LeaveNoticesCard, type LeaveRequestItem } from "./leave-notices-card";
+import {
+  AttendanceRosterTable,
+  type AttendanceStatus,
+} from "./attendance-roster-table";
 
-type AttendanceStatus = "present" | "absent" | "late" | "excused";
+interface AttendanceRecordResponse {
+  studentId: string | { _id?: string; toString(): string };
+  status: AttendanceStatus;
+  remarks?: string;
+}
 
 interface AttendanceTabProps {
-  students: any[];
+  students: StudentDomainRecord[];
   gradeClassOptions: Array<{ value: string; label: string; badge?: string }>;
   teacherName: string;
 }
@@ -37,7 +46,7 @@ export function TeacherAttendanceTab({
     Record<string, { status: AttendanceStatus; remarks: string }>
   >({});
   const [savingAttendance, setSavingAttendance] = useState(false);
-  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequestItem[]>([]);
   const [reviewingLeaveId, setReviewingLeaveId] = useState<string | null>(null);
 
   const fetchLeaveRequests = async () => {
@@ -82,12 +91,14 @@ export function TeacherAttendanceTab({
       const data = await res.json();
       if (data.success && Array.isArray(data.records)) {
         const map: Record<string, { status: AttendanceStatus; remarks: string }> = {};
-        data.records.forEach((rec: any) => {
-          const sId = rec.studentId?._id || rec.studentId?.toString() || rec.studentId;
-          map[sId] = {
-            status: rec.status,
-            remarks: rec.remarks || "",
-          };
+        (data.records as AttendanceRecordResponse[]).forEach((rec) => {
+          const sId =
+            typeof rec.studentId === "string"
+              ? rec.studentId
+              : rec.studentId?._id || rec.studentId?.toString();
+          if (sId) {
+            map[sId] = { status: rec.status, remarks: rec.remarks || "" };
+          }
         });
         setAttendanceMap(map);
       }
@@ -97,7 +108,7 @@ export function TeacherAttendanceTab({
   };
 
   useEffect(() => {
-    setAttendanceDate(new Date().toISOString().split("T")[0]);
+    setAttendanceDate(toIsoDate());
     fetchLeaveRequests();
   }, []);
 
@@ -121,10 +132,11 @@ export function TeacherAttendanceTab({
       ...uniqueSections.map((sec) => ({
         value: sec,
         label: `Section ${sec}`,
-        badge: `${studentsInAttendanceGrade.filter(
-          (s) => (s.section || "A").trim().toLowerCase() === sec.toLowerCase()
-        ).length
-          }`,
+        badge: `${
+          studentsInAttendanceGrade.filter(
+            (s) => (s.section || "A").trim().toLowerCase() === sec.toLowerCase()
+          ).length
+        }`,
       })),
     ];
   })();
@@ -199,7 +211,7 @@ export function TeacherAttendanceTab({
       if (data.success) {
         toast.success(
           data.message ||
-          `Daily attendance for ${records.length} students successfully recorded for ${attendanceDate}.`
+            `Daily attendance for ${records.length} students successfully recorded for ${attendanceDate}.`
         );
         fetchAttendanceForDate(attendanceDate);
       } else {
@@ -278,74 +290,11 @@ export function TeacherAttendanceTab({
         </div>
       </div>
 
-      {/* Live Parent Leave Notices Pending Review */}
-      {leaveRequests.length > 0 && (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <UserCheck className="h-4 w-4 text-amber-600" />
-              Guardian Leave Notices ({leaveRequests.filter((l) => l.status === "pending").length} Pending)
-            </span>
-          </div>
-          <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-            {leaveRequests.slice(0, 10).map((lv) => (
-              <div
-                key={lv._id}
-                className="rounded-lg border bg-card p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-bold text-foreground">{lv.studentName}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      ({lv.rollNumber} • {lv.grade} - Sec {lv.section})
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">
-                      {lv.leaveDate}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Reason: <strong className="text-foreground">{lv.reason}</strong>
-                    {lv.notes ? ` — ${lv.notes}` : ""} (By {lv.parentName})
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {lv.status === "pending" ? (
-                    <>
-                      <Button
-                        size="xs"
-                        disabled={reviewingLeaveId === lv._id}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        onClick={() => handleReviewLeave(lv._id, "approved")}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        disabled={reviewingLeaveId === lv._id}
-                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                        onClick={() => handleReviewLeave(lv._id, "rejected")}
-                      >
-                        Reject
-                      </Button>
-                    </>
-                  ) : (
-                    <span
-                      className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${lv.status === "approved"
-                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                        : "bg-destructive/15 text-destructive"
-                        }`}
-                    >
-                      {lv.status}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <LeaveNoticesCard
+        leaveRequests={leaveRequests}
+        reviewingLeaveId={reviewingLeaveId}
+        onReview={handleReviewLeave}
+      />
 
       {/* Live Attendance Counter KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -398,141 +347,15 @@ export function TeacherAttendanceTab({
         </div>
       </div>
 
-      {/* Student Attendance Marking Table */}
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b bg-muted/40 font-semibold text-muted-foreground uppercase text-[10px]">
-              <tr>
-                <th className="py-3 px-4">Student</th>
-                <th className="py-3 px-4">Class & Section</th>
-                <th className="py-3 px-4">Attendance Status</th>
-                <th className="py-3 px-4">Remarks / Explanation</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredAttendanceStudents.length > 0 ? (
-                filteredAttendanceStudents.map((st) => {
-                  const currentStatus = attendanceMap[st._id]?.status || "present";
-                  const currentRemarks = attendanceMap[st._id]?.remarks || "";
-                  const initials =
-                    st.name
-                      .split(" ")
-                      .filter(Boolean)
-                      .map((n: string) => n[0])
-                      .slice(0, 2)
-                      .join("")
-                      .toUpperCase() || "ST";
-
-                  return (
-                    <tr key={st._id} className="hover:bg-muted/15 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-[11px]">
-                            {initials}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-foreground text-xs leading-tight">
-                              {st.name}
-                            </div>
-                            <div className="text-[10px] font-mono text-muted-foreground">
-                              {st.rollNumber}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <span className="inline-block px-2 py-0.5 rounded-md bg-muted text-foreground text-[11px] font-medium">
-                          {st.grade} • Sec {st.section}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <div className="inline-flex rounded-lg border bg-muted/50 p-0.5 gap-0.5">
-                          {(
-                            [
-                              { id: "present", label: "Present", activeCls: "bg-emerald-600" },
-                              { id: "absent", label: "Absent", activeCls: "bg-rose-600" },
-                              { id: "late", label: "Late", activeCls: "bg-amber-600" },
-                              { id: "excused", label: "Excused", activeCls: "bg-sky-600" },
-                            ] as const
-                          ).map((btn) => (
-                            <button
-                              key={btn.id}
-                              type="button"
-                              onClick={() => handleStatusChange(st._id, btn.id)}
-                              className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${currentStatus === btn.id
-                                ? `${btn.activeCls} text-white font-semibold shadow-xs`
-                                : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-                                }`}
-                            >
-                              {btn.label}
-                            </button>
-                          ))}
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <input
-                          type="text"
-                          name={`attendanceRemark_${st._id}`}
-                          aria-label={`Attendance remark for ${st.name}`}
-                          placeholder="Optional remark (e.g. Sick, Doctor appointment)..."
-                          value={currentRemarks}
-                          onChange={(e) => handleRemarksChange(st._id, e.target.value)}
-                          className="w-full h-8 rounded-lg border bg-background px-2.5 text-xs outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60"
-                        />
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={4} className="py-10 text-center text-muted-foreground">
-                    <CalendarCheck className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
-                    <p className="font-medium text-foreground text-xs">No students found</p>
-                    <p className="text-[11px] max-w-xs mx-auto mt-0.5">
-                      Ensure students are enrolled in Admin Hub with the selected grade filter.
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Submission Bar */}
-        <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="text-xs text-muted-foreground flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            <span>
-              Ready to commit attendance for <strong className="text-foreground">{attendanceTotal}</strong>{" "}
-              students for Date: <strong className="text-foreground">{attendanceDate}</strong>
-            </span>
-          </div>
-
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleSaveAttendance}
-            disabled={savingAttendance || filteredAttendanceStudents.length === 0}
-            className="shadow-sm font-semibold h-9 px-5"
-          >
-            {savingAttendance ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving Attendance Records...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-1.5" />
-                Save Daily Attendance Records
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <AttendanceRosterTable
+        students={filteredAttendanceStudents}
+        attendanceMap={attendanceMap}
+        attendanceDate={attendanceDate}
+        savingAttendance={savingAttendance}
+        onStatusChange={handleStatusChange}
+        onRemarksChange={handleRemarksChange}
+        onSaveAttendance={handleSaveAttendance}
+      />
     </div>
   );
 }

@@ -6,26 +6,29 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
+import { SUBJECT_OPTIONS } from "@/lib/constants";
 import { formatReadableDate } from "@/lib/format";
+import type { AssignmentSubmissionItem } from "@/lib/domain-types";
 
-const SUBJECT_OPTIONS = [
-  { value: "Mathematics", label: "Mathematics" },
-  { value: "Physics", label: "Physics" },
-  { value: "Chemistry", label: "Chemistry" },
-  { value: "Biology", label: "Biology" },
-  { value: "Computer Science", label: "Computer Science" },
-  { value: "English Literature", label: "English Literature" },
-  { value: "Urdu", label: "Urdu" },
-  { value: "Pakistan Studies", label: "Pakistan Studies" },
-  { value: "Islamiat / Ethics", label: "Islamiat / Ethics" },
-];
+interface TeacherAssignmentItem {
+  id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  section: string;
+  dueDate: string;
+  points: number;
+  description?: string;
+  submissionsCount?: number;
+  submissions?: AssignmentSubmissionItem[];
+}
 
 interface TeacherAssignmentsTabProps {
   assignedClasses: Array<{ grade: string; section: string }>;
 }
 
 export function TeacherAssignmentsTab({ assignedClasses }: TeacherAssignmentsTabProps) {
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<TeacherAssignmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -343,7 +346,7 @@ export function TeacherAssignmentsTab({ assignedClasses }: TeacherAssignmentsTab
 
                   {Array.isArray(a.submissions) && a.submissions.length > 0 && (
                     <div className="pt-2 border-t flex flex-wrap gap-1.5">
-                      {a.submissions.map((sub: any, idx: number) => (
+                      {a.submissions.map((sub, idx) => (
                         <span
                           key={idx}
                           className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"

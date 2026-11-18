@@ -96,10 +96,13 @@ const StudentSchema = new Schema<IStudent>(
 );
 
 const existingStudentModel = mongoose.models.Student;
+const academicRecordsSchema = existingStudentModel?.schema.path("academicRecords") as
+  | { schema?: { path: (field: string) => unknown } }
+  | undefined;
 if (
   existingStudentModel &&
   (!existingStudentModel.schema.path("schoolId") ||
-    !(existingStudentModel.schema.path("academicRecords") as any)?.schema?.path("examStatus"))
+    !academicRecordsSchema?.schema?.path("examStatus"))
 ) {
   mongoose.deleteModel("Student");
 }

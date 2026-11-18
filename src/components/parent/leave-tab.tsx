@@ -8,6 +8,15 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { CustomDatePicker } from "@/components/ui/custom-date-picker";
 import { formatReadableDate } from "@/lib/format";
 
+interface LeaveHistoryItem {
+  _id: string;
+  reason: string;
+  leaveDate: string;
+  notes?: string;
+  reviewedBy?: string;
+  status: "pending" | "approved" | "rejected" | string;
+}
+
 interface ParentLeaveTabProps {
   studentId?: string;
   studentName?: string;
@@ -26,7 +35,7 @@ export function ParentLeaveTab({ studentId, studentName }: ParentLeaveTabProps) 
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<LeaveHistoryItem[]>([]);
 
   const fetchLeaves = async () => {
     if (!studentId) return;

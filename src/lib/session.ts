@@ -32,12 +32,16 @@ export interface SessionPayload {
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function getSigningSecret(): string {
-  return (
+  const secret =
     process.env.SESSION_SECRET ||
     process.env.NEXTAUTH_SECRET ||
-    process.env.MONGODB_URI ||
-    "campusflow-secure-signing-fallback-key-v1"
-  );
+    process.env.MONGODB_URI;
+  if (!secret) {
+    throw new Error(
+      "Missing signing secret: configure SESSION_SECRET or NEXTAUTH_SECRET in environment variables."
+    );
+  }
+  return secret;
 }
 
 function toBase64Url(bytes: Uint8Array): string {

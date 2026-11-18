@@ -3,11 +3,12 @@
 import { Users, Search, Award, MessageSquare } from "lucide-react";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { EXAM_TERM_LABELS } from "@/lib/constants";
+import type { GradebookEntryRecord } from "@/lib/domain-types";
 
 export type RosterTermFilter = "all" | "first_term" | "mid_term" | "final_term" | "class_test";
 
 interface GradebookRosterProps {
-  records: any[];
+  records: GradebookEntryRecord[];
   gradeClassFilter: string;
   gradeSectionFilter: string;
   rosterTermFilter: RosterTermFilter;
@@ -41,11 +42,11 @@ export function GradebookRoster({
   const avgPct =
     records.length > 0
       ? Math.round(
-          records.reduce(
-            (sum, r) => sum + (r.examStatus === "absent" ? 0 : Number(r.percentage || 0)),
-            0
-          ) / records.length
-        )
+        records.reduce(
+          (sum, r) => sum + (r.examStatus === "absent" ? 0 : Number(r.percentage || 0)),
+          0
+        ) / records.length
+      )
       : 0;
 
   return (
@@ -73,14 +74,14 @@ export function GradebookRoster({
             {(gradeClassFilter !== "all" ||
               gradeSectionFilter !== "all" ||
               rosterSearch.trim() !== "") && (
-              <button
-                type="button"
-                onClick={onResetFilters}
-                className="text-primary font-semibold hover:underline px-1"
-              >
-                Reset
-              </button>
-            )}
+                <button
+                  type="button"
+                  onClick={onResetFilters}
+                  className="text-primary font-semibold hover:underline px-1"
+                >
+                  Reset
+                </button>
+              )}
           </div>
         </div>
 
@@ -159,17 +160,16 @@ export function GradebookRoster({
               rec.term === "mid_term"
                 ? "Mid-Term"
                 : rec.term === "final_term"
-                ? "Final Term"
-                : rec.term === "class_test"
-                ? "Class Test"
-                : "1st Term";
+                  ? "Final Term"
+                  : rec.term === "class_test"
+                    ? "Class Test"
+                    : "1st Term";
 
             return (
               <div
                 key={rec.id || i}
-                className={`p-3.5 sm:px-4 sm:py-3 space-y-2 text-xs transition-colors ${
-                  isAbsent ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/25"
-                }`}
+                className={`p-3.5 sm:px-4 sm:py-3 space-y-2 text-xs transition-colors ${isAbsent ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/25"
+                  }`}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 sm:gap-3 items-center">
                   <div className="sm:col-span-5 min-w-0">
@@ -187,11 +187,10 @@ export function GradebookRoster({
                         {shortTerm}
                       </span>
                       <span
-                        className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${
-                          isAbsent
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        }`}
+                        className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${isAbsent
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          }`}
                       >
                         {isAbsent ? "Absent" : "Present"}
                       </span>
@@ -211,11 +210,10 @@ export function GradebookRoster({
                         </span>
                       )}
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                          isPass
-                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                            : "bg-destructive/15 text-destructive"
-                        }`}
+                        className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${isPass
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-destructive/15 text-destructive"
+                          }`}
                       >
                         {isAbsent ? "ABSENT" : isPass ? "PASS" : "FAIL"}
                       </span>

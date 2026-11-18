@@ -72,14 +72,14 @@ export function DropdownTrigger({
 }) {
   const { isOpen, setIsOpen } = useDropdown();
 
-  if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<any>, {
+  if (asChild && React.isValidElement<{ onClick?: (e: React.MouseEvent) => void }>(children)) {
+    const childOnClick = children.props.onClick;
+    return React.cloneElement(children, {
       onClick: (e: React.MouseEvent) => {
-        (children.props as any).onClick?.(e);
+        childOnClick?.(e);
         setIsOpen((prev) => !prev);
       },
-      "aria-haspopup": "menu",
-      "aria-expanded": isOpen,
+      ...({ "aria-haspopup": "menu", "aria-expanded": isOpen } as Record<string, unknown>),
     });
   }
 

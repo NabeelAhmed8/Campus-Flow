@@ -117,9 +117,8 @@ export async function POST(req: Request) {
 
       return NextResponse.json(
         {
-          error: `Invalid verification code. You have ${remaining} ${
-            remaining === 1 ? "attempt" : "attempts"
-          } remaining.`,
+          error: `Invalid verification code. You have ${remaining} ${remaining === 1 ? "attempt" : "attempts"
+            } remaining.`,
         },
         { status: 400 }
       );
@@ -146,12 +145,12 @@ export async function POST(req: Request) {
 
     const linkedIdsObj = Array.isArray(pending.linkedStudentIds)
       ? pending.linkedStudentIds
-          .filter((id) => mongoose.Types.ObjectId.isValid(id))
-          .map((id) => new mongoose.Types.ObjectId(id))
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id))
       : pending.linkedStudentId &&
         mongoose.Types.ObjectId.isValid(pending.linkedStudentId)
-      ? [new mongoose.Types.ObjectId(pending.linkedStudentId)]
-      : [];
+        ? [new mongoose.Types.ObjectId(pending.linkedStudentId)]
+        : [];
 
     // Create verified user account
     const user = await User.create({
@@ -218,8 +217,9 @@ export async function POST(req: Request) {
 
     attachSessionCookie(response, token);
     return response;
-  } catch (error: any) {
-    if (error?.code === 11000) {
+  } catch (error: unknown) {
+    const mongoErr = error as { code?: number } | null;
+    if (mongoErr?.code === 11000) {
       return NextResponse.json(
         { error: "An account with this email address already exists. Please sign in." },
         { status: 409 }

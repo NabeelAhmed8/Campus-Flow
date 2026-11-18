@@ -38,20 +38,33 @@ export async function PUT(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
-    const rawList = Array.isArray(body?.bankAccounts) ? body.bankAccounts : [];
+    const rawList: unknown[] = Array.isArray(body?.bankAccounts) ? body.bankAccounts : [];
+
+    type RawBankEntry = {
+      id?: unknown;
+      bankName?: unknown;
+      badge?: unknown;
+      accountTitle?: unknown;
+      accountNo?: unknown;
+      iban?: unknown;
+      branch?: unknown;
+    };
 
     const sanitized: ISchoolBankAccount[] = rawList
       .slice(0, 8)
-      .filter(
-        (b: any) =>
-          typeof b?.bankName === "string" &&
-          b.bankName.trim() &&
-          typeof b?.accountTitle === "string" &&
-          b.accountTitle.trim() &&
-          typeof b?.accountNo === "string" &&
-          b.accountNo.trim()
-      )
-      .map((b: any, idx: number) => ({
+      .filter((item): item is RawBankEntry & { bankName: string; accountTitle: string; accountNo: string } => {
+        if (!item || typeof item !== "object") return false;
+        const b = item as RawBankEntry;
+        return (
+          typeof b.bankName === "string" &&
+          b.bankName.trim().length > 0 &&
+          typeof b.accountTitle === "string" &&
+          b.accountTitle.trim().length > 0 &&
+          typeof b.accountNo === "string" &&
+          b.accountNo.trim().length > 0
+        );
+      })
+      .map((b, idx) => ({
         id:
           typeof b.id === "string" && b.id.trim()
             ? b.id.trim().slice(0, 40)

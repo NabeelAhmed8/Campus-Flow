@@ -3,12 +3,18 @@
 import { CalendarCheck, Award, Receipt, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculateAcademicStanding } from "@/lib/academics";
+import { getInitials } from "@/lib/format";
+import type {
+  AttendanceStatsRecord,
+  FeeDomainRecord,
+  StudentDomainRecord,
+} from "@/lib/domain-types";
 import type { ParentTab } from "./types";
 
 interface ParentOverviewTabProps {
-  student: any;
-  feeRecord: any | null;
-  attendanceStats: any | null;
+  student: StudentDomainRecord;
+  feeRecord: FeeDomainRecord | null;
+  attendanceStats: AttendanceStatsRecord | null;
   onSwitchTab: (tab: ParentTab) => void;
 }
 
@@ -33,11 +39,7 @@ export function ParentOverviewTab({
       >
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase">
-            {student.name
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .slice(0, 2)}
+            {getInitials(student.name, "ST")}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -63,8 +65,8 @@ export function ParentOverviewTab({
             <div className="flex items-center gap-1.5 mt-0.5">
               <CalendarCheck className="h-4 w-4 text-emerald-600" />
               <span className="text-lg font-bold">
-                {attendanceStats && attendanceStats.total > 0
-                  ? `${attendanceStats.attendancePercentage}%`
+                {attendanceStats && (attendanceStats.total ?? 0) > 0
+                  ? `${attendanceStats.attendancePercentage ?? 0}%`
                   : "—"}
               </span>
             </div>
@@ -97,13 +99,12 @@ export function ParentOverviewTab({
               Rs. {Number(feeRecord?.amount || student.monthlyFee || 0).toLocaleString()}
             </span>
             <span
-              className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                feeRecord?.status === "paid"
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : feeRecord?.status === "pending_verification"
+              className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${feeRecord?.status === "paid"
+                ? "bg-emerald-500/10 text-emerald-600"
+                : feeRecord?.status === "pending_verification"
                   ? "bg-sky-500/10 text-sky-600"
                   : "bg-amber-500/10 text-amber-600"
-              }`}
+                }`}
             >
               {feeLabel}
             </span>

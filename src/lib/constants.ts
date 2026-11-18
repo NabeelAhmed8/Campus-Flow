@@ -39,6 +39,13 @@ export const EXAM_TERM_LABELS: Record<string, string> = {
   all: "All Terms",
 };
 
+export const EXAM_TERM_OPTIONS = [
+  { value: "first_term", label: "First Term Exam", shortLabel: "1st Term", badge: "1st Term" },
+  { value: "mid_term", label: "2nd / Mid-Term Exam", shortLabel: "Mid-Term", badge: "Mid-Term" },
+  { value: "final_term", label: "Final Term Exam", shortLabel: "Final Exam", badge: "Final" },
+  { value: "class_test", label: "Class Test / Unit Quiz", shortLabel: "Quiz", badge: "Quiz" },
+];
+
 export const AUDIENCE_LABELS: Record<string, string> = {
   all: "All Campus",
   admin: "Admin Only",
@@ -93,4 +100,16 @@ export const PAKISTANI_BANK_OPTIONS = [
   { value: "Raast Instant Pay (SBP)", label: "Raast Instant Pay", sublabel: "State Bank of Pakistan (0% fee)", badge: "Instant" },
   { value: "JazzCash / EasyPaisa", label: "JazzCash / EasyPaisa", sublabel: "Mobile Microfinance Wallet", badge: "Mobile" },
   { value: "Cash Counter Challan", label: "School Cash Counter Challan", sublabel: "Physical receipt at campus", badge: "Manual" },
+];
+
+export const SUBJECT_OPTIONS = [
+  { value: "Mathematics", label: "Mathematics", badge: "STEM" },
+  { value: "Computer Science", label: "Computer Science", badge: "STEM" },
+  { value: "Physics", label: "Physics", badge: "STEM" },
+  { value: "Chemistry", label: "Chemistry", badge: "STEM" },
+  { value: "Biology", label: "Biology", badge: "STEM" },
+  { value: "English Literature", label: "English Literature", badge: "Humanities" },
+  { value: "Urdu", label: "Urdu", badge: "Language" },
+  { value: "Pakistan Studies", label: "Pakistan Studies", badge: "Social Studies" },
+  { value: "Islamiat / Ethics", label: "Islamiat / Ethics", badge: "Studies" },
 ];

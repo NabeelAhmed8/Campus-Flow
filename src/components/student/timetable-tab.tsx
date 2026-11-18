@@ -5,6 +5,7 @@ import { Clock, FileText, Eye, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilePreviewModal, type PreviewableFile } from "@/components/ui/file-preview-modal";
 import { formatFileSize } from "@/lib/format";
+import type { UploadedDoc } from "@/lib/domain-types";
 
 interface StudentTimetableTabProps {
   grade: string;
@@ -13,7 +14,7 @@ interface StudentTimetableTabProps {
 
 export function StudentTimetableTab({ grade, section }: StudentTimetableTabProps) {
   const [loading, setLoading] = useState(true);
-  const [timetableDocs, setTimetableDocs] = useState<any[]>([]);
+  const [timetableDocs, setTimetableDocs] = useState<UploadedDoc[]>([]);
   const [previewFile, setPreviewFile] = useState<PreviewableFile | null>(null);
 
   const fetchTimetable = async () => {
@@ -34,7 +35,8 @@ export function StudentTimetableTab({ grade, section }: StudentTimetableTabProps
       };
 
       if (docsRes?.success && Array.isArray(docsRes.documents)) {
-        setTimetableDocs(docsRes.documents.filter((d: any) => matchesGrade(d.grade)));
+        const docs = docsRes.documents as UploadedDoc[];
+        setTimetableDocs(docs.filter((d) => matchesGrade(d.grade)));
       }
     } finally {
       setLoading(false);

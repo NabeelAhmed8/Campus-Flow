@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { syncClientAuthStorage } from "@/lib/client-auth";
 
 type PortalRole = "admin" | "coordinator" | "teacher" | "student" | "parent";
 
@@ -124,20 +125,7 @@ export default function LoginPage() {
         return;
       }
 
-      if (typeof window !== "undefined") {
-        localStorage.setItem("campusflow_user_role", data.user.role);
-        localStorage.setItem("campusflow_user_name", data.user.name);
-        localStorage.setItem("campusflow_user_email", data.user.email);
-        localStorage.setItem("campusflow_institution", data.user.institution);
-        if (data.user.schoolCode) {
-          localStorage.setItem("campusflow_school_code", data.user.schoolCode);
-        }
-
-        if (data.user.role === "admin") {
-          localStorage.setItem("campusflow_admin_name", data.user.name);
-        }
-        window.dispatchEvent(new Event("campusflow_institution_updated"));
-      }
+      syncClientAuthStorage(data.user);
 
       toast.success(`Welcome back ${data.user.name}! Loading ${activePortal.title}...`);
       setTimeout(() => {

@@ -1,4 +1,4 @@
-import { Building, BrainCircuit, BookOpen, Users } from "lucide-react";
+import { Building, BrainCircuit, BookOpen, Users, type LucideIcon } from "lucide-react";
 
 export type PortalRole = "admin" | "teacher" | "student" | "parent";
 export type SignupStep = "details" | "verify";
@@ -8,7 +8,7 @@ export interface RoleOption {
   title: string;
   badge: string;
   targetPath: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
 }
 

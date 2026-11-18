@@ -1,3 +1,5 @@
+export type { SyllabusRecord } from "@/lib/domain-types";
+
 export type CoordinatorTab =
   | "teacher-attendance"
   | "timetable"
@@ -22,16 +24,4 @@ export interface AttendanceDraft {
   substituteTeacher: string;
   remarks: string;
   saved?: boolean;
-}
-
-export interface SyllabusRecord {
-  _id: string;
-  grade: string;
-  term: SyllabusTerm;
-  subject: string;
-  chapterTitle: string;
-  topics: string;
-  targetDate: string;
-  status: SyllabusStatus;
-  assignedTeacher: string;
 }

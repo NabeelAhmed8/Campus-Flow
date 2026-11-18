@@ -13,13 +13,14 @@ import {
   CalendarCheck,
   ShieldCheck,
   CreditCard,
+  type LucideIcon,
 } from "lucide-react";
 
 export interface WorkspaceNavItem {
   name: string;
   href: string;
   tabKey?: string;
-  icon: any;
+  icon: LucideIcon;
   badge?: string;
 }
 
@@ -31,7 +32,7 @@ export interface WorkspaceConfig {
   description: string;
   landingDescription: string;
   defaultTab: string;
-  icon: any;
+  icon: LucideIcon;
   rootHref: string;
   navItems: WorkspaceNavItem[];
 }

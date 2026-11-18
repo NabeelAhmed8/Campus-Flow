@@ -6,6 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { GraduationCap, LayoutDashboard, ChevronRight, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { SubscriptionGuard } from "@/components/subscription-guard";
+import {
+  clearClientAuthStorage,
+  readClientAuthStorage,
+  syncClientAuthStorage,
+} from "@/lib/client-auth";
+import { getInitials } from "@/lib/format";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import {
@@ -34,16 +40,16 @@ export default function DashboardLayout({
   const currentKey = pathname.startsWith("/coordinator")
     ? "coordinator"
     : pathname.startsWith("/teacher")
-    ? "teacher"
-    : pathname.startsWith("/parent")
-    ? "parent"
-    : pathname.startsWith("/student")
-    ? "student"
-    : pathname.startsWith("/admin")
-    ? "admin"
-    : verifiedUserRole && WORKSPACES[verifiedUserRole]
-    ? verifiedUserRole
-    : "admin";
+      ? "teacher"
+      : pathname.startsWith("/parent")
+        ? "parent"
+        : pathname.startsWith("/student")
+          ? "student"
+          : pathname.startsWith("/admin")
+            ? "admin"
+            : verifiedUserRole && WORKSPACES[verifiedUserRole]
+              ? verifiedUserRole
+              : "admin";
 
   const workspace = WORKSPACES[currentKey];
 
@@ -60,11 +66,7 @@ export default function DashboardLayout({
         if (isCancelled) return;
 
         if (!res.ok || !data?.authenticated || !data?.user?.role) {
-          localStorage.removeItem("campusflow_user_role");
-          localStorage.removeItem("campusflow_user_name");
-          localStorage.removeItem("campusflow_user_email");
-          localStorage.removeItem("campusflow_institution");
-          localStorage.removeItem("campusflow_admin_name");
+          clearClientAuthStorage();
           setIsAuthorized(false);
           if (data?.error) {
             toast.error(data.error);
@@ -80,12 +82,12 @@ export default function DashboardLayout({
           const expectedRole = pathname.startsWith("/coordinator")
             ? "coordinator"
             : pathname.startsWith("/teacher")
-            ? "teacher"
-            : pathname.startsWith("/parent")
-            ? "parent"
-            : pathname.startsWith("/student")
-            ? "student"
-            : "admin";
+              ? "teacher"
+              : pathname.startsWith("/parent")
+                ? "parent"
+                : pathname.startsWith("/student")
+                  ? "student"
+                  : "admin";
 
           if (verifiedRole !== expectedRole) {
             setIsAuthorized(false);
@@ -96,35 +98,28 @@ export default function DashboardLayout({
               verifiedRole === "coordinator"
                 ? "/coordinator"
                 : verifiedRole === "teacher"
-                ? "/teacher"
-                : verifiedRole === "student"
-                ? "/student"
-                : verifiedRole === "parent"
-                ? "/parent"
-                : "/admin";
+                  ? "/teacher"
+                  : verifiedRole === "student"
+                    ? "/student"
+                    : verifiedRole === "parent"
+                      ? "/parent"
+                      : "/admin";
             router.replace(target);
             return;
           }
         }
 
         // Sync verified server session metadata
-        localStorage.setItem("campusflow_user_role", verifiedRole);
-        if (data.user.name) {
-          localStorage.setItem("campusflow_user_name", data.user.name);
-          setUserName(data.user.name);
-        }
-        if (data.user.email) {
-          localStorage.setItem("campusflow_user_email", data.user.email);
-          setUserEmail(data.user.email);
-        }
-        if (data.user.institution) {
-          localStorage.setItem("campusflow_institution", data.user.institution);
-          setInstitutionName(data.user.institution);
-        }
-        if (data.user.schoolCode) {
-          localStorage.setItem("campusflow_school_code", data.user.schoolCode);
-        }
-        window.dispatchEvent(new Event("campusflow_institution_updated"));
+        syncClientAuthStorage({
+          role: verifiedRole,
+          name: data.user.name,
+          email: data.user.email,
+          institution: data.user.institution,
+          schoolCode: data.user.schoolCode,
+        });
+        if (data.user.name) setUserName(data.user.name);
+        if (data.user.email) setUserEmail(data.user.email);
+        if (data.user.institution) setInstitutionName(data.user.institution);
 
         setIsAuthorized(true);
         setCurrentUrlSearch(window.location.search);
@@ -139,19 +134,16 @@ export default function DashboardLayout({
     verifySession();
 
     const handleUpdate = () => {
-      const updated = localStorage.getItem("campusflow_institution");
-      if (updated) setInstitutionName(updated);
-      const name =
-        localStorage.getItem("campusflow_user_name") ||
-        localStorage.getItem("campusflow_admin_name");
-      if (name) setUserName(name);
-      const email = localStorage.getItem("campusflow_user_email");
-      if (email) setUserEmail(email);
+      const auth = readClientAuthStorage();
+      if (auth.institution) setInstitutionName(auth.institution);
+      if (auth.name) setUserName(auth.name);
+      if (auth.email) setUserEmail(auth.email);
     };
 
-    const handlePop = (e?: any) => {
-      if (e && "detail" in e && e.detail?.tab) {
-        setCurrentUrlSearch(`?tab=${e.detail.tab}`);
+    const handlePop = (e?: Event) => {
+      const custom = e as CustomEvent<{ tab?: string }> | undefined;
+      if (custom?.detail?.tab) {
+        setCurrentUrlSearch(`?tab=${custom.detail.tab}`);
       } else if (typeof window !== "undefined") {
         setCurrentUrlSearch(window.location.search);
       }
@@ -169,33 +161,18 @@ export default function DashboardLayout({
     };
   }, [pathname, router, workspace.title]);
 
-  const initials =
-    userName
-      .split(" ")
-      .filter(Boolean)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() ||
-    institutionName
-      .split(" ")
-      .filter(Boolean)
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() ||
-    "CF";
+  const initials = getInitials(userName, "") || getInitials(institutionName, "CF");
 
   const currentBreadcrumbs = isProfileRoute
     ? [
-        { label: "Home", href: "/" },
-        { label: workspace.title, href: workspace.rootHref },
-        { label: "My Profile & Account" },
-      ]
+      { label: "Home", href: "/" },
+      { label: workspace.title, href: workspace.rootHref },
+      { label: "My Profile & Account" },
+    ]
     : STATIC_BREADCRUMBS[pathname] || [
-        { label: "Home", href: "/" },
-        { label: workspace.title },
-      ];
+      { label: "Home", href: "/" },
+      { label: workspace.title },
+    ];
 
   const handleNavItemClick = (item: NavItem) => {
     if (item.tabKey && pathname === workspace.rootHref) {
@@ -214,12 +191,7 @@ export default function DashboardLayout({
       } catch {
         // Proceed with client cleanup regardless
       }
-      localStorage.removeItem("campusflow_user_role");
-      localStorage.removeItem("campusflow_user_name");
-      localStorage.removeItem("campusflow_user_email");
-      localStorage.removeItem("campusflow_institution");
-      localStorage.removeItem("campusflow_admin_name");
-      localStorage.removeItem("campusflow_school_code");
+      clearClientAuthStorage();
       window.location.href = "/login";
     }
   };

@@ -58,9 +58,32 @@ export async function POST(req: Request) {
     );
   }
 
-  let payload: Record<string, any>;
+  interface SafepayNotificationNode {
+    tracker?: string;
+    token?: string;
+    order_id?: string;
+    reference?: string;
+    state?: string;
+    metadata?: { order_id?: string };
+    notification?: SafepayNotificationNode;
+  }
+
+  interface SafepayWebhookPayload {
+    type?: string;
+    event?: string;
+    data?: SafepayNotificationNode;
+    notification?: SafepayNotificationNode;
+    tracker?: string;
+    token?: string;
+    order_id?: string;
+    reference?: string;
+    state?: string;
+    metadata?: { order_id?: string };
+  }
+
+  let payload: SafepayWebhookPayload;
   try {
-    payload = JSON.parse(rawBody);
+    payload = JSON.parse(rawBody) as SafepayWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Malformed JSON payload." }, { status: 400 });
   }

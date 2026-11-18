@@ -5,6 +5,7 @@ import { LandingNavbar, type LandingAuthState } from "@/components/landing/landi
 import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingFeatures } from "@/components/landing/landing-features";
 import { LandingPricing } from "@/components/landing/landing-pricing";
+import { clearClientAuthStorage } from "@/lib/client-auth";
 
 const INITIAL_AUTH: LandingAuthState = {
   isLoggedIn: false,
@@ -45,11 +46,7 @@ export default function Home() {
             roleLabel: ROLE_LABELS[role] || "Dashboard",
           });
         } else {
-          localStorage.removeItem("campusflow_user_role");
-          localStorage.removeItem("campusflow_user_name");
-          localStorage.removeItem("campusflow_user_email");
-          localStorage.removeItem("campusflow_institution");
-          localStorage.removeItem("campusflow_admin_name");
+          clearClientAuthStorage();
         }
       } catch {
         // Leave logged-out state on network error
@@ -69,11 +66,7 @@ export default function Home() {
     } catch {
       // Proceed with client cleanup regardless
     }
-    localStorage.removeItem("campusflow_user_role");
-    localStorage.removeItem("campusflow_user_name");
-    localStorage.removeItem("campusflow_user_email");
-    localStorage.removeItem("campusflow_institution");
-    localStorage.removeItem("campusflow_admin_name");
+    clearClientAuthStorage();
     setAuthState(INITIAL_AUTH);
     window.location.reload();
   };

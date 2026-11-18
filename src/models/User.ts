@@ -51,7 +51,10 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-const existingUserEnum = (mongoose.models.User?.schema?.path("role") as any)?.enumValues;
+const roleSchemaPath = mongoose.models.User?.schema?.path("role") as
+  | { enumValues?: string[] }
+  | undefined;
+const existingUserEnum = roleSchemaPath?.enumValues;
 if (
   mongoose.models.User &&
   (!mongoose.models.User.schema.path("schoolId") ||

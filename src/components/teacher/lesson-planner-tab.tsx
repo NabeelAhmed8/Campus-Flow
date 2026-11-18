@@ -41,7 +41,12 @@ export function LessonPlannerTab({ grade, onGradeChange }: LessonPlannerTabProps
   const [duration, setDuration] = useState("45 mins");
   const [subject, setSubject] = useState("");
   const [loading, setLoading] = useState(false);
-  const [generatedPlan, setGeneratedPlan] = useState<any>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<{
+    objectives?: string[];
+    content?: string;
+    assessmentQuestions?: string[];
+    homework?: string;
+  } | null>(null);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();

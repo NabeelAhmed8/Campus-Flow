@@ -19,7 +19,10 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { CampusDocumentsPanel } from "@/components/campus-documents-panel";
 import { usePortalTab } from "@/hooks/use-portal-tab";
+import { readClientAuthStorage } from "@/lib/client-auth";
+import { getInitials } from "@/lib/format";
 import { calculateAcademicStanding } from "@/lib/academics";
+import type { AttendanceStatsRecord, StudentDomainRecord } from "@/lib/domain-types";
 import { StudentTimetableTab } from "@/components/student/timetable-tab";
 import {
   StudentAssignmentsTab,
@@ -41,18 +44,18 @@ export default function StudentPage() {
   const [activeTab, switchTab] = usePortalTab<StudentTab>(STUDENT_TABS, "timetable");
 
   const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<StudentDomainRecord[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [institutionName, setInstitutionName] = useState("CampusFlow");
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
   const [togglingAssignmentId, setTogglingAssignmentId] = useState<string | null>(null);
-  const [attendanceStats, setAttendanceStats] = useState<any>(null);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStatsRecord | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const syncInst = () => {
-      const saved = localStorage.getItem("campusflow_institution");
-      if (saved) setInstitutionName(saved);
+      const auth = readClientAuthStorage();
+      if (auth.institution) setInstitutionName(auth.institution);
     };
     syncInst();
     window.addEventListener("campusflow_institution_updated", syncInst);
@@ -236,11 +239,7 @@ export default function StudentPage() {
           <div className="rounded-2xl border bg-card p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-2xl uppercase shadow-xs">
-                {activeStudent.name
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .slice(0, 2)}
+                {getInitials(activeStudent.name, "ST")}
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -283,13 +282,13 @@ export default function StudentPage() {
               <div>
                 <span className="text-[11px] text-muted-foreground block">Attendance</span>
                 <span className="text-lg font-bold text-foreground">
-                  {attendanceStats && attendanceStats.total > 0
-                    ? `${attendanceStats.attendancePercentage}%`
+                  {attendanceStats && (attendanceStats.total ?? 0) > 0
+                    ? `${attendanceStats.attendancePercentage ?? 0}%`
                     : "—"}
                 </span>
                 <span className="block text-[10px] text-muted-foreground">
-                  {attendanceStats && attendanceStats.total > 0
-                    ? `${attendanceStats.present}/${attendanceStats.total} Sessions`
+                  {attendanceStats && (attendanceStats.total ?? 0) > 0
+                    ? `${attendanceStats.present}/${attendanceStats.total ?? 0} Sessions`
                     : "No Roll Calls Yet"}
                 </span>
               </div>

@@ -3,11 +3,13 @@
 import { Receipt, ShieldCheck, Download, Building2, CheckCircle2, Copy, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { toIsoDate } from "@/lib/format";
+import type { FeeDomainRecord, StudentDomainRecord } from "@/lib/domain-types";
 import type { SchoolBankAccount } from "./types";
 
 interface ParentFeePayTabProps {
-  student: any;
-  feeRecord: any | null;
+  student: StudentDomainRecord;
+  feeRecord: FeeDomainRecord | null;
   bankAccounts: SchoolBankAccount[];
   onDownloadVoucher: () => void;
   onOpenBankModal: () => void;
@@ -38,13 +40,12 @@ export function ParentFeePayTab({
           </div>
           {feeRecord ? (
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${
-                isPaid
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : isVerifying
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${isPaid
+                ? "bg-emerald-500/10 text-emerald-600"
+                : isVerifying
                   ? "bg-sky-500/10 text-sky-600"
                   : "bg-amber-500/10 text-amber-600"
-              }`}
+                }`}
             >
               {isVerifying ? "Pending Verification" : feeRecord.status}
             </span>
@@ -66,9 +67,7 @@ export function ParentFeePayTab({
                 <div className="flex justify-between py-1 border-b border-border/60">
                   <span className="text-muted-foreground">Due Date:</span>
                   <span className="font-semibold">
-                    {feeRecord.dueDate
-                      ? new Date(feeRecord.dueDate).toISOString().split("T")[0]
-                      : "15 days from issue"}
+                    {feeRecord.dueDate ? toIsoDate(feeRecord.dueDate) : "15 days from issue"}
                   </span>
                 </div>
                 <div className="flex justify-between py-1">

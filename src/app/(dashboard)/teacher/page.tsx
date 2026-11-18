@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { CampusDocumentsPanel } from "@/components/campus-documents-panel";
 import { usePortalTab } from "@/hooks/use-portal-tab";
+import { readClientAuthStorage } from "@/lib/client-auth";
+import type { GradebookEntryRecord, StudentDomainRecord } from "@/lib/domain-types";
 import { LessonPlannerTab } from "@/components/teacher/lesson-planner-tab";
 import { QuizMakerTab } from "@/components/teacher/quiz-maker-tab";
 import { GradebookTab } from "@/components/teacher/gradebook-tab";
@@ -36,8 +38,8 @@ export default function TeacherPage() {
   const [activeTab, switchTab] = usePortalTab<TeacherTab>(TEACHER_TABS, "planner");
 
   const [grade, setGrade] = useState("Grade 9");
-  const [students, setStudents] = useState<any[]>([]);
-  const [gradeRecords, setGradeRecords] = useState<any[]>([]);
+  const [students, setStudents] = useState<StudentDomainRecord[]>([]);
+  const [gradeRecords, setGradeRecords] = useState<GradebookEntryRecord[]>([]);
   const [loadingGrades, setLoadingGrades] = useState(true);
   const [teacherName, setTeacherName] = useState("Faculty Educator");
   const [assignedClasses, setAssignedClasses] = useState<
@@ -71,10 +73,8 @@ export default function TeacherPage() {
 
   useEffect(() => {
     fetchTeacherData();
-    if (typeof window !== "undefined") {
-      const name = localStorage.getItem("campusflow_user_name");
-      if (name) setTeacherName(name);
-    }
+    const auth = readClientAuthStorage();
+    if (auth.name) setTeacherName(auth.name);
   }, []);
 
   const gradeClassOptions = useMemo(() => {

@@ -1,42 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  Upload,
-  FileText,
-  Image as ImageIcon,
-  Eye,
-  Download,
-  Trash2,
-  Bell,
-  CheckCircle2,
-} from "lucide-react";
+import { Upload, Bell } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { CustomSelect } from "@/components/ui/custom-select";
 import { FilePreviewModal } from "@/components/ui/file-preview-modal";
-import { ALL_CLASSES_GRADE_OPTIONS, TERM_OPTIONS } from "@/lib/constants";
-import { formatFileSize } from "@/lib/format";
+import {
+  UploadedFilesList,
+  type UploadedDocumentRow,
+} from "@/components/coordinator/uploaded-files-list";
+import { UploadFormPanel } from "@/components/coordinator/upload-form-panel";
+import type { UploadedDoc } from "@/lib/domain-types";
 
 type UploadCategory = "timetable" | "syllabus" | "datesheet";
-
-interface UploadedDoc {
-  _id: string;
-  category: UploadCategory | "circular";
-  title: string;
-  grade: string;
-  section: string;
-  term: string;
-  audience: string;
-  notes: string;
-  fileName: string;
-  mimeType: "application/pdf" | "image/jpeg" | "image/png";
-  fileSize: number;
-  uploadedBy: string;
-  createdAt: string;
-  fileUrl: string;
-  downloadUrl: string;
-}
 
 interface CoordinatorFileUploadProps {
   category: UploadCategory;
@@ -78,18 +53,6 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
-const AUDIENCE_OPTIONS = [
-  { value: "all", label: "All Campus (Teachers, Students & Parents)" },
-  { value: "teachers", label: "Teachers Only" },
-  { value: "parents", label: "Parents Only" },
-  { value: "students", label: "Students Only" },
-];
-
-const UPLOAD_TERM_OPTIONS = [
-  { value: "", label: "General / All Terms" },
-  ...TERM_OPTIONS,
-];
-
 export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) {
   const cfg = CATEGORY_CONFIG[category];
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,7 +68,7 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
   const [term, setTerm] = useState("");
   const [audience, setAudience] = useState("all");
   const [notes, setNotes] = useState("");
-  const [previewDoc, setPreviewDoc] = useState<UploadedDoc | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<UploadedDocumentRow | null>(null);
 
   const loadDocs = useCallback(async () => {
     setIsLoading(true);
@@ -186,9 +149,7 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
         return;
       }
 
-      toast.success(
-        data.message || "File uploaded and portal notifications sent!"
-      );
+      toast.success(data.message || "File uploaded and portal notifications sent!");
       setSelectedFile(null);
       setTitle("");
       setNotes("");
@@ -236,299 +197,49 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Upload Form */}
-        <form onSubmit={handleUpload} className="lg:col-span-5 space-y-3 text-xs">
-          {/* File Picker Drop Zone */}
-          <div>
-            <label
-              htmlFor={`upload-file-${category}`}
-              className="block text-[11px] font-semibold mb-1 text-foreground"
-            >
-              Attach File (PDF, JPG, JPEG, PNG — Max 5 MB)
-            </label>
-            <input
-              ref={fileInputRef}
-              id={`upload-file-${category}`}
-              name={`file_${category}`}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`w-full rounded-xl border-2 border-dashed p-4 text-center transition-all flex flex-col items-center justify-center gap-1.5 ${selectedFile
-                ? "border-emerald-500/60 bg-emerald-500/5"
-                : "border-border hover:border-primary/60 hover:bg-muted/30"
-                }`}
-            >
-              {selectedFile ? (
-                <>
-                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                  <span className="font-semibold text-foreground text-xs truncate max-w-full px-2">
-                    {selectedFile.name}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {formatFileSize(selectedFile.size)} • Click to change file
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-6 w-6 text-primary" />
-                  <span className="font-semibold text-foreground text-xs">
-                    Click to select PDF, JPEG, JPG, or PNG
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Instant sync to Teacher, Student &amp; Parent portals
-                  </span>
-                </>
-              )}
-            </button>
-          </div>
+        <UploadFormPanel
+          category={category}
+          titlePlaceholder={cfg.titlePlaceholder}
+          showSection={cfg.showSection}
+          showTerm={cfg.showTerm}
+          fileInputRef={fileInputRef}
+          selectedFile={selectedFile}
+          title={title}
+          grade={grade}
+          section={section}
+          term={term}
+          audience={audience}
+          notes={notes}
+          isUploading={isUploading}
+          onFileChange={handleFileChange}
+          onTitleChange={setTitle}
+          onGradeChange={setGrade}
+          onSectionChange={setSection}
+          onTermChange={setTerm}
+          onAudienceChange={setAudience}
+          onNotesChange={setNotes}
+          onSubmit={handleUpload}
+        />
 
-          <div>
-            <label
-              htmlFor={`upload-title-${category}`}
-              className="block text-[11px] font-semibold mb-1"
-            >
-              Document Title
-            </label>
-            <input
-              id={`upload-title-${category}`}
-              name={`title_${category}`}
-              type="text"
-              autoComplete="off"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={cfg.titlePlaceholder}
-              className="w-full h-8.5 rounded-lg border bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor={`upload-grade-${category}`}
-                className="block text-[11px] font-semibold mb-1"
-              >
-                Class / Grade
-              </label>
-              <CustomSelect
-                id={`upload-grade-${category}`}
-                value={grade}
-                onChange={setGrade}
-                options={ALL_CLASSES_GRADE_OPTIONS}
-                size="sm"
-              />
-            </div>
-
-            {cfg.showSection && (
-              <div>
-                <label
-                  htmlFor={`upload-section-${category}`}
-                  className="block text-[11px] font-semibold mb-1"
-                >
-                  Section
-                </label>
-                <input
-                  id={`upload-section-${category}`}
-                  name={`section_${category}`}
-                  type="text"
-                  autoComplete="off"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  placeholder="All Sections, A, B, Iqbal..."
-                  className="w-full h-8.5 rounded-lg border bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            )}
-
-            {cfg.showTerm && (
-              <div>
-                <label
-                  htmlFor={`upload-term-${category}`}
-                  className="block text-[11px] font-semibold mb-1"
-                >
-                  Academic Term
-                </label>
-                <CustomSelect
-                  id={`upload-term-${category}`}
-                  value={term}
-                  onChange={setTerm}
-                  options={UPLOAD_TERM_OPTIONS}
-                  size="sm"
-                />
-              </div>
-            )}
-
-            <div className="sm:col-span-2">
-              <label
-                htmlFor={`upload-audience-${category}`}
-                className="block text-[11px] font-semibold mb-1"
-              >
-                Notify &amp; Share With
-              </label>
-              <CustomSelect
-                id={`upload-audience-${category}`}
-                value={audience}
-                onChange={setAudience}
-                options={AUDIENCE_OPTIONS}
-                size="sm"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label
-                htmlFor={`upload-notes-${category}`}
-                className="block text-[11px] font-semibold mb-1"
-              >
-                Short Note (Optional)
-              </label>
-              <input
-                id={`upload-notes-${category}`}
-                name={`notes_${category}`}
-                type="text"
-                autoComplete="off"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g. Effective from Monday, reporting time 7:50 AM..."
-                className="w-full h-8.5 rounded-lg border bg-background px-3 text-xs outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isUploading || !selectedFile}
-            className="w-full h-9 text-xs"
-          >
-            <Upload className="mr-1.5 h-3.5 w-3.5" />
-            {isUploading ? "Uploading & Notifying..." : "Upload File & Notify Portals"}
-          </Button>
-        </form>
-
-        {/* Uploaded Files List for this Category */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Uploaded Files ({docs.length})
-            </h4>
-          </div>
-
-          {isLoading ? (
-            <div className="py-10 text-center text-xs text-muted-foreground">
-              Loading uploaded files...
-            </div>
-          ) : docs.length === 0 ? (
-            <div className="py-10 px-4 text-center rounded-xl border border-dashed text-xs text-muted-foreground space-y-1">
-              <FileText className="h-7 w-7 mx-auto text-muted-foreground/30" />
-              <p className="font-semibold text-foreground">No Files Uploaded Yet</p>
-              <p>
-                Upload a PDF or image on the left to share it instantly with Teachers, Students, and Parents.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {docs.map((doc) => {
-                const isPdf = doc.mimeType === "application/pdf";
-                return (
-                  <div
-                    key={doc._id}
-                    className="rounded-xl border bg-muted/15 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div
-                        className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${isPdf
-                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                          : "bg-primary/10 text-primary border-primary/20"
-                          }`}
-                      >
-                        {isPdf ? (
-                          <FileText className="h-5 w-5" />
-                        ) : (
-                          <ImageIcon className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="font-bold text-sm text-foreground truncate">
-                          {doc.title}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-                          <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">
-                            {doc.grade}
-                          </span>
-                          {doc.section && doc.section !== "All Sections" && (
-                            <span className="px-1.5 py-0.5 rounded bg-muted text-foreground font-medium">
-                              Sec {doc.section}
-                            </span>
-                          )}
-                          <span>{isPdf ? "PDF" : "Image"}</span>
-                          <span>• {formatFileSize(doc.fileSize)}</span>
-                        </div>
-                        {doc.notes && (
-                          <p className="text-[11px] text-muted-foreground truncate">
-                            {doc.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPreviewDoc(doc)}
-                        className="h-8 px-2.5 text-xs"
-                      >
-                        <Eye className="h-3.5 w-3.5 mr-1" />
-                        View
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                        title="Download file"
-                        asChild
-                      >
-                        <a href={doc.downloadUrl} download={doc.fileName}>
-                          <Download className="h-4 w-4" />
-                        </a>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(doc._id)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        title="Delete file"
-                        aria-label={`Delete ${doc.title}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <UploadedFilesList
+          docs={docs}
+          isLoading={isLoading}
+          onPreview={(doc: UploadedDocumentRow) => setPreviewDoc(doc)}
+          onDelete={handleDelete}
+        />
       </div>
 
       <FilePreviewModal
         file={
           previewDoc
             ? {
-              title: previewDoc.title,
-              fileName: previewDoc.fileName,
-              subtitle: `${previewDoc.fileName} • ${previewDoc.grade}`,
-              mimeType: previewDoc.mimeType,
-              fileUrl: previewDoc.fileUrl,
-              downloadUrl: previewDoc.downloadUrl,
-            }
+                title: previewDoc.title,
+                fileName: previewDoc.fileName,
+                subtitle: `${previewDoc.fileName} • ${previewDoc.grade}`,
+                mimeType: previewDoc.mimeType,
+                fileUrl: previewDoc.fileUrl,
+                downloadUrl: previewDoc.downloadUrl,
+              }
             : null
         }
         onClose={() => setPreviewDoc(null)}

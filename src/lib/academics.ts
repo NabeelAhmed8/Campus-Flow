@@ -1,3 +1,5 @@
+import type { AcademicRecordItem } from "@/lib/domain-types";
+
 export interface AcademicStandingSummary {
   hasRecords: boolean;
   totalSubjects: number;
@@ -31,7 +33,7 @@ export function percentageToGpa(pct: number): number {
 }
 
 export function calculateAcademicStanding(
-  academicRecords?: Array<Record<string, any>> | null
+  academicRecords?: AcademicRecordItem[] | null
 ): AcademicStandingSummary {
   const records = Array.isArray(academicRecords) ? academicRecords : [];
   if (records.length === 0) {

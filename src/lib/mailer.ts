@@ -24,6 +24,99 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function getSmtpConfig() {
+  const user = process.env.SMTP_USER?.trim() || "";
+  const pass = process.env.SMTP_PASS?.trim() || "";
+  const isPlaceholder =
+    !user ||
+    !pass ||
+    user.includes("your-email@gmail.com") ||
+    pass.includes("your-16-char");
+
+  if (isPlaceholder) return null;
+
+  const host = process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
+
+  return {
+    user,
+    pass: pass.replace(/\s+/g, ""),
+    host,
+    port,
+    secure,
+  };
+}
+
+async function deliverEmailViaProvider(params: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  senderLabel: string;
+  timeoutMs?: number;
+}): Promise<"resend" | "smtp" | null> {
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+  if (resendKey) {
+    const fromAddress =
+      process.env.EMAIL_FROM?.trim() ||
+      process.env.SMTP_FROM?.trim() ||
+      `${params.senderLabel} <onboarding@resend.dev>`;
+
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [params.to],
+        subject: params.subject,
+        html: params.html,
+        text: params.text,
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      console.error("[MAILER_RESEND_ERROR]", res.status, errBody);
+      throw new Error("Unable to send email via configured email provider.");
+    }
+
+    return "resend";
+  }
+
+  const smtp = getSmtpConfig();
+  if (smtp) {
+    const timeout = params.timeoutMs ?? 10000;
+    const transporter = nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
+      connectionTimeout: timeout,
+      greetingTimeout: timeout,
+      socketTimeout: timeout + 5000,
+      auth: { user: smtp.user, pass: smtp.pass },
+    });
+
+    await transporter.sendMail({
+      from:
+        process.env.SMTP_FROM?.trim() ||
+        process.env.EMAIL_FROM?.trim() ||
+        `${params.senderLabel} <${smtp.user}>`,
+      to: params.to,
+      subject: params.subject,
+      text: params.text,
+      html: params.html,
+    });
+
+    return "smtp";
+  }
+
+  return null;
+}
+
 function buildVerificationEmailHtml({
   name,
   code,
@@ -92,84 +185,17 @@ export async function sendVerificationEmail(
   const html = buildVerificationEmailHtml(params);
   const text = `Hi ${params.name},\n\nYour CampusFlow (${params.roleTitle}) verification code is: ${params.code}\n\nThis code expires in 10 minutes. If you did not request this, please ignore this email.`;
 
-  // Priority 1: Resend API
-  const resendKey = process.env.RESEND_API_KEY?.trim();
-  if (resendKey) {
-    const fromAddress =
-      process.env.EMAIL_FROM?.trim() ||
-      process.env.SMTP_FROM?.trim() ||
-      "CampusFlow <onboarding@resend.dev>";
-
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress,
-        to: [params.to],
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      console.error("[MAILER_RESEND_ERROR]", res.status, errBody);
-      throw new Error("Unable to send verification email via email provider.");
-    }
-
-    return { sent: true, deliveryMode: "resend" };
+  const provider = await deliverEmailViaProvider({
+    to: params.to,
+    subject,
+    html,
+    text,
+    senderLabel: "CampusFlow",
+  });
+  if (provider) {
+    return { sent: true, deliveryMode: provider };
   }
 
-  // Priority 2: Standard SMTP (Option A — Gmail App Password, Outlook, Brevo, etc.)
-  const rawSmtpUser = process.env.SMTP_USER?.trim() || "";
-  const rawSmtpPass = process.env.SMTP_PASS?.trim() || "";
-  const isPlaceholderCreds =
-    !rawSmtpUser ||
-    !rawSmtpPass ||
-    rawSmtpUser.includes("your-email@gmail.com") ||
-    rawSmtpPass.includes("your-16-char");
-
-  if (!isPlaceholderCreds) {
-    const smtpHost = process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
-    const smtpPort = Number(process.env.SMTP_PORT) || 587;
-    const smtpSecure =
-      process.env.SMTP_SECURE === "true" || smtpPort === 465;
-    // Strip spaces automatically in case user pastes Google's "xxxx xxxx xxxx xxxx" format
-    const normalizedPass = rawSmtpPass.replace(/\s+/g, "");
-    const fromAddress =
-      process.env.SMTP_FROM?.trim() ||
-      process.env.EMAIL_FROM?.trim() ||
-      `CampusFlow <${rawSmtpUser}>`;
-
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-      auth: {
-        user: rawSmtpUser,
-        pass: normalizedPass,
-      },
-    });
-
-    await transporter.sendMail({
-      from: fromAddress,
-      to: params.to,
-      subject,
-      text,
-      html,
-    });
-
-    return { sent: true, deliveryMode: "smtp" };
-  }
-
-  // Priority 3: Local Development Preview Fallback (NEVER allowed in production)
   if (process.env.NODE_ENV !== "production") {
     let previewUrl: string | undefined;
     try {
@@ -178,10 +204,7 @@ export async function sendVerificationEmail(
         host: testAccount.smtp.host,
         port: testAccount.smtp.port,
         secure: testAccount.smtp.secure,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
+        auth: { user: testAccount.user, pass: testAccount.pass },
       });
       const info = await testTransporter.sendMail({
         from: '"CampusFlow" <no-reply@campusflow.edu>',
@@ -191,11 +214,9 @@ export async function sendVerificationEmail(
         html,
       });
       const url = nodemailer.getTestMessageUrl(info);
-      if (typeof url === "string") {
-        previewUrl = url;
-      }
+      if (typeof url === "string") previewUrl = url;
     } catch {
-      // Offline / Ethereal unreachable — still log to server terminal below
+      // Offline / Ethereal unreachable — log to server console below
     }
 
     console.info(
@@ -216,10 +237,6 @@ export async function sendVerificationEmail(
     "Email delivery service is not configured. Please contact the system administrator."
   );
 }
-
-// ============================================================================
-// SaaS Subscription Transactional Emails (Renewal Reminders, Receipts, Cancel)
-// ============================================================================
 
 export interface SendSubscriptionEmailParams {
   to: string;
@@ -255,16 +272,14 @@ export async function sendSubscriptionEmail(
 
   if (params.eventType === "renewal_reminder") {
     const d = params.daysRemaining ?? 3;
-    subject = `Action Required: ${safeInst} CampusFlow plan expires in ${d} ${
-      d === 1 ? "day" : "days"
-    }`;
+    subject = `Action Required: ${safeInst} CampusFlow plan expires in ${d} ${d === 1 ? "day" : "days"}`;
     headline = `Your ${safePlan} expires in ${d} ${d === 1 ? "day" : "days"}`;
-    bodyCopy = `Hi <strong>${safeName}</strong>, this is a friendly reminder that your <strong>${safePlan}</strong> for <strong>${safeInst}</strong> will end on <strong>${safeEndDate}</strong>. Please renew or enable Auto-Renew in your Admin Hub &rarr; Subscription &amp; Plan panel to ensure uninterrupted access for your faculty, students, and parents.`;
+    bodyCopy = `Hi <strong>${safeName}</strong>, this is a friendly reminder that your <strong>${safePlan}</strong> for <strong>${safeInst}</strong> will end on <strong>${safeEndDate}</strong>. Please renew or enable Auto-Renew in your Admin Hub &rarr; Subscription &amp; Plan panel to ensure uninterrupted access.`;
     accentColor = "#d97706";
   } else if (params.eventType === "grace_warning") {
     subject = `Urgent: 24-Hour Grace Period Active for ${safeInst} on CampusFlow`;
     headline = "Your 24-Hour Grace Period Has Started";
-    bodyCopy = `Hi <strong>${safeName}</strong>, your <strong>${safePlan}</strong> for <strong>${safeInst}</strong> has ended. You have <strong>24 hours</strong> to complete your subscription payment before workspace access is paused. Sign in to Admin Hub &rarr; Subscription &amp; Plan to renew immediately.`;
+    bodyCopy = `Hi <strong>${safeName}</strong>, your <strong>${safePlan}</strong> for <strong>${safeInst}</strong> has ended. You have <strong>24 hours</strong> to complete your subscription payment before workspace access is paused.`;
     accentColor = "#e11d48";
   } else if (params.eventType === "auto_renewed") {
     subject = `Payment Receipt: ${safePlan} Auto-Renewed (${safeInvoice})`;
@@ -274,7 +289,7 @@ export async function sendSubscriptionEmail(
   } else if (params.eventType === "canceled") {
     subject = `Subscription Cancellation Confirmed — ${safeInst}`;
     headline = "Subscription Scheduled to Cancel";
-    bodyCopy = `Hi <strong>${safeName}</strong>, your cancellation request for <strong>${safePlan}</strong> has been processed and Auto-Renew has been turned off. Your campus retains full access until <strong>${safeEndDate}</strong>. You can resume your plan anytime before that date.`;
+    bodyCopy = `Hi <strong>${safeName}</strong>, your cancellation request for <strong>${safePlan}</strong> has been processed and Auto-Renew has been turned off. Your campus retains full access until <strong>${safeEndDate}</strong>.`;
     accentColor = "#52525b";
   } else {
     subject = `Welcome to ${safePlan} — Payment Confirmed (${safeInvoice})`;
@@ -312,72 +327,19 @@ export async function sendSubscriptionEmail(
   const text = `${headline}\n\n${bodyCopy.replace(/<[^>]+>/g, "")}`;
 
   try {
-    const resendKey = process.env.RESEND_API_KEY?.trim();
-    if (resendKey) {
-      const fromAddress =
-        process.env.EMAIL_FROM?.trim() ||
-        process.env.SMTP_FROM?.trim() ||
-        "CampusFlow Billing <onboarding@resend.dev>";
-
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: fromAddress,
-          to: [params.to],
-          subject,
-          html,
-          text,
-        }),
-      });
-      return res.ok;
+    const provider = await deliverEmailViaProvider({
+      to: params.to,
+      subject,
+      html,
+      text,
+      senderLabel: "CampusFlow Billing",
+      timeoutMs: 8000,
+    });
+    if (!provider) {
+      console.info(
+        `[SUBSCRIPTION EMAIL LOG] To: ${params.to} | Event: ${params.eventType} | Subject: ${subject}`
+      );
     }
-
-    const rawSmtpUser = process.env.SMTP_USER?.trim() || "";
-    const rawSmtpPass = process.env.SMTP_PASS?.trim() || "";
-    const isPlaceholder =
-      !rawSmtpUser ||
-      !rawSmtpPass ||
-      rawSmtpUser.includes("your-email@gmail.com") ||
-      rawSmtpPass.includes("your-16-char");
-
-    if (!isPlaceholder) {
-      const smtpHost = process.env.SMTP_HOST?.trim() || "smtp.gmail.com";
-      const smtpPort = Number(process.env.SMTP_PORT) || 587;
-      const smtpSecure =
-        process.env.SMTP_SECURE === "true" || smtpPort === 465;
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpSecure,
-        connectionTimeout: 8000,
-        greetingTimeout: 8000,
-        socketTimeout: 10000,
-        auth: {
-          user: rawSmtpUser,
-          pass: rawSmtpPass.replace(/\s+/g, ""),
-        },
-      });
-      await transporter.sendMail({
-        from:
-          process.env.SMTP_FROM?.trim() ||
-          process.env.EMAIL_FROM?.trim() ||
-          `CampusFlow Billing <${rawSmtpUser}>`,
-        to: params.to,
-        subject,
-        text,
-        html,
-      });
-      return true;
-    }
-
-    // Dev fallback — log cleanly without interrupting dashboard flow
-    console.info(
-      `[SUBSCRIPTION EMAIL LOG] To: ${params.to} | Event: ${params.eventType} | Subject: ${subject}`
-    );
     return true;
   } catch (err) {
     console.error("[SUBSCRIPTION_EMAIL_ERROR]", err);

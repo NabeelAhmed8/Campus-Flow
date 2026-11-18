@@ -2,42 +2,41 @@
 
 import { useState } from "react";
 import { Award } from "lucide-react";
-import { EXAM_TERM_LABELS } from "@/lib/constants";
+import { EXAM_TERM_LABELS, EXAM_TERM_OPTIONS } from "@/lib/constants";
+import { percentageToLetterGrade } from "@/lib/academics";
+import type { AcademicRecordItem, StudentDomainRecord } from "@/lib/domain-types";
+import { ExamRecordsTable, type NormalizedExamRecord } from "./exam-records-table";
 import type { ExamTermKey } from "./types";
 
 interface ParentExamResultsTabProps {
-  student: any;
+  student: StudentDomainRecord;
 }
 
 const TERM_DEFS: Array<{ key: ExamTermKey; label: string; shortLabel: string }> = [
-  { key: "first_term", label: "First Term Exam", shortLabel: "1st Term" },
-  { key: "mid_term", label: "2nd / Mid-Term Exam", shortLabel: "Mid-Term" },
-  { key: "final_term", label: "Final Term Exam", shortLabel: "Final Exam" },
+  ...EXAM_TERM_OPTIONS.filter((o) => o.value !== "class_test").map((o) => ({
+    key: o.value as ExamTermKey,
+    label: o.label,
+    shortLabel: o.shortLabel,
+  })),
   { key: "all", label: "All Exams Summary", shortLabel: "All Terms" },
 ];
 
-function computeGrade(pct: number): string {
-  if (pct >= 90) return "A+";
-  if (pct >= 80) return "A";
-  if (pct >= 70) return "B+";
-  if (pct >= 60) return "B";
-  if (pct >= 50) return "C";
-  if (pct >= 40) return "D";
-  return "F";
-}
-
-function normalizeRecord(rec: any) {
+function normalizeRecord(rec: AcademicRecordItem): NormalizedExamRecord {
   const examStatus = rec.examStatus === "absent" ? "absent" : "present";
   const total = Number(rec.totalMarks || 100);
-  const obtained = examStatus === "absent" ? 0 : Number(rec.obtainedMarks || 0);
+  const obtained = examStatus === "absent" ? 0 : Number(rec.obtainedMarks ?? rec.marksObtained ?? 0);
   const pct =
     examStatus === "absent" ? 0 : Number(rec.percentage ?? Math.round((obtained / total) * 100));
   const resultStatus =
     rec.resultStatus || (examStatus === "absent" ? "absent" : pct >= 40 ? "pass" : "fail");
-  const grade = examStatus === "absent" ? "AB" : rec.grade || computeGrade(pct);
+  const grade = examStatus === "absent" ? "AB" : rec.grade || percentageToLetterGrade(pct);
   const term = rec.term || "first_term";
   return {
-    ...rec,
+    id: rec.id,
+    _id: rec._id,
+    subject: rec.subject,
+    teacherName: rec.teacherName,
+    assessment: rec.assessment,
     term,
     examStatus,
     totalMarks: total,
@@ -51,7 +50,7 @@ function normalizeRecord(rec: any) {
 export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
   const [selectedExamTerm, setSelectedExamTerm] = useState<ExamTermKey>("first_term");
 
-  const allRecords: any[] = Array.isArray(student.academicRecords) ? student.academicRecords : [];
+  const allRecords = Array.isArray(student.academicRecords) ? student.academicRecords : [];
   const normalizedAll = allRecords.map(normalizeRecord);
 
   const filteredRecs =
@@ -69,16 +68,16 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
 
   const allAbsent = filteredRecs.length > 0 && absentSubjects.length === filteredRecs.length;
   const overallGrade =
-    filteredRecs.length === 0 ? "—" : allAbsent ? "AB" : computeGrade(overallPct);
+    filteredRecs.length === 0 ? "—" : allAbsent ? "AB" : percentageToLetterGrade(overallPct);
 
   const overallVerdict =
     filteredRecs.length === 0
       ? "PENDING"
       : allAbsent
-      ? "ABSENT"
-      : absentSubjects.length > 0 || failedSubjects.length > 0 || overallPct < 40
-      ? "FAIL"
-      : "PASS";
+        ? "ABSENT"
+        : absentSubjects.length > 0 || failedSubjects.length > 0 || overallPct < 40
+          ? "FAIL"
+          : "PASS";
 
   const getTermStats = (tk: string) => {
     const recs = normalizedAll.filter((r) => r.term === tk);
@@ -98,7 +97,7 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
 
   return (
     <div id="results" className="space-y-5 scroll-mt-20">
-      {/* 3-Term Pakistani School Progress Summary */}
+      {/* 3-Term Progress Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         {(["first_term", "mid_term", "final_term"] as const).map((tk) => {
           const stats = getTermStats(tk);
@@ -227,8 +226,8 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
                   {allAbsent
                     ? "Absent (All Papers)"
                     : absentSubjects.length === 0
-                    ? `Present (${presentSubjects.length}/${filteredRecs.length})`
-                    : `${presentSubjects.length} Present • ${absentSubjects.length} Absent`}
+                      ? `Present (${presentSubjects.length}/${filteredRecs.length})`
+                      : `${presentSubjects.length} Present • ${absentSubjects.length} Absent`}
                 </div>
                 {absentSubjects.length > 0 && (
                   <p className="text-[10px] text-destructive font-medium mt-0.5 truncate">
@@ -275,10 +274,10 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
                   {overallVerdict === "PASS"
                     ? "Passed & Cleared"
                     : overallVerdict === "ABSENT"
-                    ? "Absent in Examination"
-                    : `Failed (${failedSubjects.length + absentSubjects.length} paper${
-                        failedSubjects.length + absentSubjects.length === 1 ? "" : "s"
-                      })`}
+                      ? "Absent in Examination"
+                      : `Failed (${failedSubjects.length + absentSubjects.length} paper${
+                          failedSubjects.length + absentSubjects.length === 1 ? "" : "s"
+                        })`}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {selectedExamTerm === "all"
@@ -290,141 +289,15 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
           )}
         </div>
 
-        {/* Subject-Wise Exam Results Table */}
-        {filteredRecs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b bg-muted/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="py-3 px-4">Subject</th>
-                  {selectedExamTerm === "all" && <th className="py-3 px-4">Exam Term</th>}
-                  <th className="py-3 px-4">Exam Attendance</th>
-                  <th className="py-3 px-4 text-right">Total Marks</th>
-                  <th className="py-3 px-4 text-right">Obtained</th>
-                  <th className="py-3 px-4 text-right">Percentage</th>
-                  <th className="py-3 px-4 text-center">Grade</th>
-                  <th className="py-3 px-4 text-center">Pass / Fail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredRecs.map((rec: any, idx: number) => {
-                  const isAbsent = rec.examStatus === "absent";
-                  const isPass = rec.resultStatus === "pass";
-                  return (
-                    <tr
-                      key={rec.id || idx}
-                      className={`transition-colors ${
-                        isAbsent ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/20"
-                      }`}
-                    >
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-foreground">{rec.subject}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {rec.teacherName || "Subject Teacher"}
-                        </div>
-                      </td>
-                      {selectedExamTerm === "all" && (
-                        <td className="py-3 px-4">
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                            {EXAM_TERM_LABELS[rec.term] || rec.assessment}
-                          </span>
-                        </td>
-                      )}
-                      <td className="py-3 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            isAbsent
-                              ? "bg-destructive/15 text-destructive border border-destructive/25"
-                              : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              isAbsent ? "bg-destructive" : "bg-emerald-500"
-                            }`}
-                          />
-                          {isAbsent ? "Absent" : "Present"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-muted-foreground">
-                        {rec.totalMarks}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
-                        {isAbsent ? <span className="text-destructive">AB</span> : rec.obtainedMarks}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-semibold">
-                        {isAbsent ? <span className="text-muted-foreground">—</span> : `${rec.percentage}%`}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span
-                          className={`inline-block min-w-[28px] px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            isAbsent || !isPass
-                              ? "bg-destructive/10 text-destructive"
-                              : rec.grade.startsWith("A")
-                              ? "bg-emerald-500/10 text-emerald-600"
-                              : "bg-sky-500/10 text-sky-600"
-                          }`}
-                        >
-                          {rec.grade}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            isPass
-                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                              : "bg-destructive/15 text-destructive"
-                          }`}
-                        >
-                          {isAbsent ? "ABSENT" : isPass ? "PASS" : "FAIL"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="border-t-2 bg-muted/30 font-bold text-xs">
-                <tr>
-                  <td
-                    colSpan={selectedExamTerm === "all" ? 3 : 2}
-                    className="py-3 px-4 text-foreground"
-                  >
-                    Grand Total ({filteredRecs.length} Subjects)
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono">{totalPossible}</td>
-                  <td className="py-3 px-4 text-right font-mono text-primary">{totalObtained}</td>
-                  <td className="py-3 px-4 text-right font-mono text-primary">{overallPct}%</td>
-                  <td className="py-3 px-4 text-center">{overallGrade}</td>
-                  <td className="py-3 px-4 text-center">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        overallVerdict === "PASS"
-                          ? "bg-emerald-600 text-white"
-                          : "bg-destructive text-white"
-                      }`}
-                    >
-                      {overallVerdict}
-                    </span>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        ) : (
-          <div className="py-12 px-6 text-center text-xs text-muted-foreground space-y-2">
-            <Award className="h-10 w-10 mx-auto text-muted-foreground/30" />
-            <p className="font-semibold text-foreground text-sm">
-              No records published for{" "}
-              {selectedExamTerm === "all"
-                ? "any examination term"
-                : EXAM_TERM_LABELS[selectedExamTerm]}{" "}
-              yet
-            </p>
-            <p className="max-w-md mx-auto">
-              Once subject teachers enter marks or mark subject exam attendance (Present / Absent) in the Teacher Suite, your child&apos;s official subject-wise result card will appear here automatically.
-            </p>
-          </div>
-        )}
+        <ExamRecordsTable
+          records={filteredRecs}
+          selectedExamTerm={selectedExamTerm}
+          totalPossible={totalPossible}
+          totalObtained={totalObtained}
+          overallPct={overallPct}
+          overallGrade={overallGrade}
+          overallVerdict={overallVerdict}
+        />
       </div>
     </div>
   );

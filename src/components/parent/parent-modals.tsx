@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Building2, Check, Copy, Hash, Loader2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { FeeDomainRecord } from "@/lib/domain-types";
 import type { SchoolBankAccount } from "./types";
 
 interface ParentBankModalProps {
   open: boolean;
-  feeRecord: any | null;
+  feeRecord: FeeDomainRecord | null;
   studentMonthlyFee?: number;
   bankAccounts: SchoolBankAccount[];
   selectedBankId: string;
