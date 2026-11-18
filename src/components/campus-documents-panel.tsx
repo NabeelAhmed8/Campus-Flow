@@ -11,8 +11,6 @@ import {
   Bell,
   RefreshCw,
   CalendarDays,
-  UserCheck,
-  MapPin,
   FolderOpen,
   Megaphone,
 } from "lucide-react";
@@ -41,19 +39,6 @@ interface UploadedDoc {
   downloadUrl: string;
 }
 
-interface TimetableRecord {
-  _id: string;
-  grade: string;
-  section: string;
-  day: string;
-  period: string;
-  startTime: string;
-  endTime: string;
-  subject: string;
-  teacherName: string;
-  room: string;
-}
-
 interface SyllabusRecord {
   _id: string;
   grade: string;
@@ -64,17 +49,6 @@ interface SyllabusRecord {
   targetDate: string;
   status: "pending" | "in_progress" | "completed";
   assignedTeacher: string;
-}
-
-interface NoticeRecord {
-  _id: string;
-  type: "datesheet" | "circular" | "substitution" | "ptm";
-  title: string;
-  audience: string;
-  grade: string;
-  eventDate: string;
-  details: string;
-  postedBy: string;
 }
 
 interface CampusDocumentsPanelProps {
@@ -110,40 +84,28 @@ export function CampusDocumentsPanel({
   >("all");
   const [gradeFilter, setGradeFilter] = useState(defaultGradeFilter);
   const [documents, setDocuments] = useState<UploadedDoc[]>([]);
-  const [timetable, setTimetable] = useState<TimetableRecord[]>([]);
   const [syllabus, setSyllabus] = useState<SyllabusRecord[]>([]);
-  const [notices, setNotices] = useState<NoticeRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<UploadedDoc | null>(null);
 
   const loadAll = useCallback(async (showToast = false) => {
     setIsLoading(true);
     try {
-      const [docsRes, ttRes, sylRes, notRes] = await Promise.all([
+      const [docsRes, sylRes] = await Promise.all([
         fetch("/api/documents", { cache: "no-store" }),
-        fetch("/api/coordinator/timetable", { cache: "no-store" }),
         fetch("/api/coordinator/syllabus", { cache: "no-store" }),
-        fetch("/api/coordinator/notices", { cache: "no-store" }),
       ]);
 
-      const [docsData, ttData, sylData, notData] = await Promise.all([
+      const [docsData, sylData] = await Promise.all([
         docsRes.json().catch(() => null),
-        ttRes.json().catch(() => null),
         sylRes.json().catch(() => null),
-        notRes.json().catch(() => null),
       ]);
 
       if (docsRes.ok && Array.isArray(docsData?.documents)) {
         setDocuments(docsData.documents);
       }
-      if (ttRes.ok && Array.isArray(ttData?.entries)) {
-        setTimetable(ttData.entries);
-      }
       if (sylRes.ok && Array.isArray(sylData?.items)) {
         setSyllabus(sylData.items);
-      }
-      if (notRes.ok && Array.isArray(notData?.notices)) {
-        setNotices(notData.notices);
       }
       if (showToast) {
         toast.success("Latest schedules, syllabus & date sheets loaded.");
@@ -175,38 +137,12 @@ export function CampusDocumentsPanel({
     });
   }, [documents, categoryTab, matchesGrade]);
 
-  const filteredTimetable = useMemo(() => {
-    if (categoryTab !== "all" && categoryTab !== "timetable") return [];
-    return timetable.filter((t) => matchesGrade(t.grade));
-  }, [timetable, categoryTab, matchesGrade]);
-
   const filteredSyllabus = useMemo(() => {
     if (categoryTab !== "all" && categoryTab !== "syllabus") return [];
     return syllabus.filter((s) => matchesGrade(s.grade));
   }, [syllabus, categoryTab, matchesGrade]);
 
-  const filteredNotices = useMemo(() => {
-    if (
-      categoryTab !== "all" &&
-      categoryTab !== "datesheet" &&
-      categoryTab !== "circular"
-    ) {
-      return [];
-    }
-    return notices.filter((n) => {
-      const matchCat =
-        categoryTab === "all" ||
-        (categoryTab === "datesheet" && n.type === "datesheet") ||
-        (categoryTab === "circular" && n.type !== "datesheet");
-      return matchCat && matchesGrade(n.grade);
-    });
-  }, [notices, categoryTab, matchesGrade]);
-
-  const hasAnyContent =
-    filteredDocs.length > 0 ||
-    filteredTimetable.length > 0 ||
-    filteredSyllabus.length > 0 ||
-    filteredNotices.length > 0;
+  const hasAnyContent = filteredDocs.length > 0 || filteredSyllabus.length > 0;
 
   return (
     <div className="space-y-5">
@@ -411,53 +347,7 @@ export function CampusDocumentsPanel({
             </div>
           )}
 
-          {/* 2. Digital Timetable Periods */}
-          {filteredTimetable.length > 0 && (
-            <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-3">
-              <h3 className="text-sm font-bold flex items-center gap-2 pb-2 border-b">
-                <Clock className="h-4 w-4 text-sky-600" />
-                Digital Class Timetable ({filteredTimetable.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {filteredTimetable.map((slot) => (
-                  <div
-                    key={slot._id}
-                    className="rounded-xl border bg-muted/15 p-3.5 space-y-1"
-                  >
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary">
-                        {slot.day}
-                      </span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-muted text-foreground">
-                        {slot.period}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        {slot.startTime} – {slot.endTime}
-                      </span>
-                    </div>
-                    <p className="font-bold text-sm text-foreground">
-                      {slot.subject}{" "}
-                      <span className="text-xs font-medium text-muted-foreground">
-                        • {slot.grade} (Sec {slot.section})
-                      </span>
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <UserCheck className="h-3 w-3 text-primary" />
-                        {slot.teacherName}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-primary" />
-                        {slot.room}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 3. Digital Term Syllabus */}
+          {/* 2. Digital Term Syllabus */}
           {filteredSyllabus.length > 0 && (
             <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-3">
               <h3 className="text-sm font-bold flex items-center gap-2 pb-2 border-b">
@@ -511,51 +401,6 @@ export function CampusDocumentsPanel({
                         </span>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 4. Published Date Sheets & Circulars */}
-          {filteredNotices.length > 0 && (
-            <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-3">
-              <h3 className="text-sm font-bold flex items-center gap-2 pb-2 border-b">
-                <Bell className="h-4 w-4 text-indigo-600" />
-                Exam Date Sheets &amp; Campus Circulars ({filteredNotices.length})
-              </h3>
-              <div className="space-y-2.5">
-                {filteredNotices.map((notice) => (
-                  <div
-                    key={notice._id}
-                    className="rounded-xl border bg-muted/15 p-4 space-y-1.5"
-                  >
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 uppercase">
-                        {notice.type === "datesheet"
-                          ? "Exam Date Sheet"
-                          : notice.type === "ptm"
-                            ? "PTM"
-                            : notice.type === "substitution"
-                              ? "Substitution"
-                              : "Circular"}
-                      </span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                        {notice.grade}
-                      </span>
-                      {notice.eventDate && (
-                        <span className="text-[11px] text-muted-foreground ml-auto inline-flex items-center gap-1">
-                          <CalendarDays className="h-3 w-3" />
-                          {notice.eventDate}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-bold text-sm text-foreground">
-                      {notice.title}
-                    </h4>
-                    <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
-                      {notice.details}
-                    </p>
                   </div>
                 ))}
               </div>
