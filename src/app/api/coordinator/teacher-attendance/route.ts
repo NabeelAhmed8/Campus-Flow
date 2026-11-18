@@ -122,9 +122,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Faculty attendance for ${savedCount} staff ${
-        savedCount === 1 ? "member" : "members"
-      } recorded for ${date}.`,
+      message: `Faculty attendance for ${savedCount} staff ${savedCount === 1 ? "member" : "members"
+        } recorded for ${date}.`,
       count: savedCount,
     });
   } catch (error) {

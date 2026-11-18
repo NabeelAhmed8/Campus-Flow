@@ -94,16 +94,15 @@ export async function POST(req: Request) {
       cleanTerm === "first_term"
         ? "First Term"
         : cleanTerm === "mid_term"
-        ? "2nd / Mid-Term"
-        : "Final Term";
+          ? "2nd / Mid-Term"
+          : "Final Term";
 
     await createCampusNotification({
       schoolId,
       category: "syllabus",
       title: `Syllabus Scheduled — ${item.grade} (${item.subject})`,
-      message: `${termLabel}: ${item.chapterTitle}${
-        item.targetDate ? ` • Target: ${item.targetDate}` : ""
-      }.`,
+      message: `${termLabel}: ${item.chapterTitle}${item.targetDate ? ` • Target: ${item.targetDate}` : ""
+        }.`,
       audience: "all",
       grade: item.grade,
       createdBy: session.name || "Academic Coordinator",

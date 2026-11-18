@@ -61,9 +61,8 @@ export async function GET(
       headers: {
         "Content-Type": doc.mimeType || "application/octet-stream",
         "Content-Length": String(rawBuffer.length),
-        "Content-Disposition": `${
-          isDownload ? "attachment" : "inline"
-        }; filename="${safeName}"`,
+        "Content-Disposition": `${isDownload ? "attachment" : "inline"
+          }; filename="${safeName}"`,
         "X-Frame-Options": "SAMEORIGIN",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, max-age=300",

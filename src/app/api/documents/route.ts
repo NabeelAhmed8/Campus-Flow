@@ -238,8 +238,8 @@ export async function POST(req: Request) {
       cleanGrade === "All Classes"
         ? "All Classes"
         : cleanSection && cleanSection !== "All Sections"
-        ? `${cleanGrade} (Section ${cleanSection})`
-        : cleanGrade;
+          ? `${cleanGrade} (Section ${cleanSection})`
+          : cleanGrade;
 
     // Broadcast live notification to target portals + Admin oversight
     await createCampusNotification({
