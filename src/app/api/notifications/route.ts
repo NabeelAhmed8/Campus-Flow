@@ -6,7 +6,7 @@ import {
   NotificationAudience,
   NotificationCategory,
 } from "@/models/CampusNotification";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 import {
   createCampusNotification,
   getAllowedAudiencesForRole,
@@ -30,29 +30,18 @@ const VALID_AUDIENCES = [
 ] as const;
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, [
-    "admin",
-    "coordinator",
-    "teacher",
-    "student",
-    "parent",
-  ]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    { emptyPayload: { success: true, notifications: [], unreadCount: 0 } }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({
-      success: true,
-      notifications: [],
-      unreadCount: 0,
-    });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
-    const query: Record<string, unknown> = {
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
-    };
+    const query: Record<string, unknown> = { schoolId: schoolObjId };
 
     const allowedAudiences = getAllowedAudiencesForRole(session.role);
     if (allowedAudiences) {
@@ -107,16 +96,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
+  const { session, schoolId } = auth;
 
   try {
     await connectDB();
@@ -154,7 +137,7 @@ export async function POST(req: Request) {
       session.role === "admin" ? "admin" : "coordinator";
 
     const created = await createCampusNotification({
-      schoolId: session.schoolId,
+      schoolId,
       category: cleanCategory,
       title: title.trim(),
       message: message.trim(),
@@ -215,25 +198,19 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, [
-    "admin",
-    "coordinator",
-    "teacher",
-    "student",
-    "parent",
-  ]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    { emptyPayload: { success: true } }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
     const body = await req.json();
     const { id, markAllRead } = body ?? {};
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
 
     if (markAllRead) {
       const query: Record<string, unknown> = { schoolId: schoolObjId };
@@ -278,16 +255,10 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -302,7 +273,7 @@ export async function DELETE(req: Request) {
 
     const deleteFilter: Record<string, unknown> = {
       _id: new mongoose.Types.ObjectId(id),
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
+      schoolId: schoolObjId,
     };
     if (session.role === "coordinator") {
       deleteFilter.audience = { $ne: "admin" };

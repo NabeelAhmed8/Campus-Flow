@@ -3,23 +3,20 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Student } from "@/models/Student";
 import { User } from "@/models/User";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["parent"]);
+  const auth = await requireSchoolAuth(req, ["parent"], {
+    errorStatus: 400,
+    errorMessage: "Your account is not connected to a school workspace.",
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "Your account is not connected to a school workspace." },
-      { status: 400 }
-    );
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -34,7 +31,6 @@ export async function POST(req: Request) {
     }
 
     const cleanRoll = rollNumber.trim();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
 
     const matchedStudent = await Student.findOne({
       schoolId: schoolObjId,

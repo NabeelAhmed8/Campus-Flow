@@ -3,27 +3,24 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { TeacherAttendance } from "@/models/TeacherAttendance";
 import { User } from "@/models/User";
-import { isValidDateString, requireAuth } from "@/lib/auth";
+import { isValidDateString, requireSchoolAuth } from "@/lib/auth";
 
 const VALID_STATUSES = ["present", "absent", "late", "leave"] as const;
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"], {
+    emptyPayload: { success: true, records: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, records: [] });
-  }
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
-    const query: Record<string, unknown> = {
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
-    };
+    const query: Record<string, unknown> = { schoolId: schoolObjId };
     if (date) {
       if (!isValidDateString(date)) {
         return NextResponse.json(
@@ -49,16 +46,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -77,7 +68,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     let savedCount = 0;
 
     for (const item of records) {

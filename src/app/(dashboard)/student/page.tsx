@@ -19,7 +19,7 @@ import { CustomSelect } from "@/components/ui/custom-select";
 import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
 import { CampusDocumentsPanel } from "@/components/campus-documents-panel";
 import { usePortalTab } from "@/hooks/use-portal-tab";
-import { readClientAuthStorage } from "@/lib/client-auth";
+import { useClientAuth } from "@/hooks/use-client-auth";
 import { getInitials } from "@/lib/format";
 import { calculateAcademicStanding } from "@/lib/academics";
 import type { AttendanceStatsRecord, StudentDomainRecord } from "@/lib/domain-types";
@@ -46,21 +46,10 @@ export default function StudentPage() {
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<StudentDomainRecord[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [institutionName, setInstitutionName] = useState("CampusFlow");
+  const { institution: institutionName } = useClientAuth();
   const [assignments, setAssignments] = useState<StudentAssignment[]>([]);
   const [togglingAssignmentId, setTogglingAssignmentId] = useState<string | null>(null);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStatsRecord | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const syncInst = () => {
-      const auth = readClientAuthStorage();
-      if (auth.institution) setInstitutionName(auth.institution);
-    };
-    syncInst();
-    window.addEventListener("campusflow_institution_updated", syncInst);
-    return () => window.removeEventListener("campusflow_institution_updated", syncInst);
-  }, []);
 
   const fetchStudentData = async () => {
     try {

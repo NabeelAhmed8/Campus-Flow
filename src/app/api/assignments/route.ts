@@ -4,20 +4,20 @@ import { connectDB } from "@/lib/db";
 import { Assignment } from "@/models/Assignment";
 import { Student } from "@/models/Student";
 import { CampusNotification } from "@/models/CampusNotification";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator", "teacher", "student", "parent"]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    { emptyPayload: { success: true, assignments: [] } }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, assignments: [] });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const { searchParams } = new URL(req.url);
     const studentIdParam = searchParams.get("studentId");
 
@@ -106,13 +106,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher"]);
+  const auth = await requireSchoolAuth(req, ["admin", "teacher"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -147,7 +144,6 @@ export async function POST(req: Request) {
       }
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const created = await Assignment.create({
       schoolId: schoolObjId,
       title: title.trim().slice(0, 160),
@@ -183,13 +179,10 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, ["student"]);
+  const auth = await requireSchoolAuth(req, ["student"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -207,7 +200,6 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "No linked student profile found." }, { status: 403 });
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const [student, assignment] = await Promise.all([
       Student.findOne({ _id: validIds[0], schoolId: schoolObjId }),
       Assignment.findOne({ _id: assignmentId, schoolId: schoolObjId }),
@@ -250,13 +242,10 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher"]);
+  const auth = await requireSchoolAuth(req, ["admin", "teacher"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -266,7 +255,6 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Invalid assignment ID." }, { status: 400 });
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const filter: Record<string, unknown> = { _id: id, schoolId: schoolObjId };
     if (session.role === "teacher") {
       filter.teacherId = new mongoose.Types.ObjectId(session.id);

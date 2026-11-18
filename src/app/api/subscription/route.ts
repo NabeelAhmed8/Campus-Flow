@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { School } from "@/models/School";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireSchoolAuth } from "@/lib/auth";
 import {
   buildInitialTrialSubscription,
   evaluateAndSyncSchoolSubscription,
@@ -21,27 +20,24 @@ function formatDateShort(date: Date): string {
 }
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, [
-    "admin",
-    "coordinator",
-    "teacher",
-    "student",
-    "parent",
-  ]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    {
+      emptyPayload: {
+        success: true,
+        subscription: null,
+        plans: SUBSCRIPTION_PLANS,
+      },
+    }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({
-      success: true,
-      subscription: null,
-      plans: SUBSCRIPTION_PLANS,
-    });
-  }
+  const { session, schoolId } = auth;
 
   try {
     await connectDB();
-    const summary = await evaluateAndSyncSchoolSubscription(session.schoolId);
+    const summary = await evaluateAndSyncSchoolSubscription(schoolId);
     if (!summary) {
       return NextResponse.json({
         success: true,
@@ -113,23 +109,17 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, ["admin"]);
+  const auth = await requireSchoolAuth(req, ["admin"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
+  const { session, schoolId } = auth;
 
   try {
     await connectDB();
     const body = await req.json();
     const { action, autoRenew } = body ?? {};
 
-    const school = await School.findById(session.schoolId);
+    const school = await School.findById(schoolId);
     if (!school) {
       return NextResponse.json(
         { error: "Institutional workspace not found." },
@@ -165,7 +155,7 @@ export async function PATCH(req: Request) {
       message = `Subscription canceled. Full access continues until ${endFormatted}. You can resume anytime.`;
 
       await createCampusNotification({
-        schoolId: session.schoolId,
+        schoolId,
         category: "billing",
         title: "Subscription Cancellation Confirmed",
         message: `Auto-Renew is now OFF for ${sub.planName}. Your institution retains full workspace access through ${endFormatted}.`,
@@ -204,7 +194,7 @@ export async function PATCH(req: Request) {
     school.markModified("subscription");
     await school.save();
 
-    const refreshed = await evaluateAndSyncSchoolSubscription(session.schoolId);
+    const refreshed = await evaluateAndSyncSchoolSubscription(schoolId);
     return NextResponse.json({
       success: true,
       message,

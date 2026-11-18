@@ -2,26 +2,21 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { CampusDocument } from "@/models/CampusDocument";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 import { getAllowedAudiencesForRole } from "@/lib/notifications";
 
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth(req, [
-    "admin",
-    "coordinator",
-    "teacher",
-    "student",
-    "parent",
-  ]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    { errorMessage: "Access denied." }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "Access denied." }, { status: 403 });
-  }
+  const { session, schoolObjId } = auth;
 
   const { id } = await context.params;
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -32,7 +27,7 @@ export async function GET(
     await connectDB();
     const query: Record<string, unknown> = {
       _id: new mongoose.Types.ObjectId(id),
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
+      schoolId: schoolObjId,
     };
 
     const allowedAudiences = getAllowedAudiencesForRole(session.role);

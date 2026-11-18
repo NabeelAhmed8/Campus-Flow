@@ -22,7 +22,8 @@ import { ParentExamResultsTab } from "@/components/parent/exam-results-tab";
 import { ParentFeePayTab } from "@/components/parent/fee-pay-tab";
 import { ParentRemarksTab } from "@/components/parent/remarks-tab";
 import { ParentLeaveTab } from "@/components/parent/leave-tab";
-import { ParentBankPaymentModal, LinkChildModal } from "@/components/parent/parent-modals";
+import { ParentBankPaymentModal } from "@/components/parent/bank-payment-modal";
+import { LinkChildModal } from "@/components/parent/link-child-modal";
 import type { ParentTab } from "@/components/parent/types";
 
 const PARENT_TABS: readonly ParentTab[] = [

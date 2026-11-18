@@ -9,7 +9,7 @@ import {
   ExamAttendanceStatus,
   ExamResultStatus,
 } from "@/models/Student";
-import { buildTeacherClassFilter, isStudentInTeacherScope, requireAuth } from "@/lib/auth";
+import { buildTeacherClassFilter, isStudentInTeacherScope, requireSchoolAuth } from "@/lib/auth";
 import { percentageToLetterGrade } from "@/lib/academics";
 import { EXAM_TERM_LABELS } from "@/lib/constants";
 
@@ -30,17 +30,15 @@ const TERM_LABELS: Record<ExamTerm, string> = {
 const PASSING_PERCENTAGE = 40;
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher", "student", "parent"]);
+  const auth = await requireSchoolAuth(req, ["admin", "teacher", "student", "parent"], {
+    emptyPayload: { success: true, records: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, records: [] });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const query: Record<string, unknown> = { schoolId: schoolObjId };
 
     if (session.role === "student" || session.role === "parent") {
@@ -119,16 +117,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher"]);
+  const auth = await requireSchoolAuth(req, ["admin", "teacher"]);
   if (auth.response) return auth.response;
 
   const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured for this account." },
-      { status: 403 }
-    );
-  }
 
   try {
     await connectDB();

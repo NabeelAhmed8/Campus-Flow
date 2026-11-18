@@ -266,6 +266,46 @@ export async function requireAuth(
   }
 }
 
+export async function requireSchoolAuth(
+  req: Request,
+  allowedRoles?: readonly PortalRole[],
+  options?: { emptyPayload?: Record<string, unknown>; errorStatus?: number; errorMessage?: string }
+): Promise<
+  | {
+      session: SessionPayload;
+      schoolId: string;
+      schoolObjId: mongoose.Types.ObjectId;
+      response?: undefined;
+    }
+  | { session?: undefined; schoolId?: undefined; schoolObjId?: undefined; response: NextResponse }
+> {
+  const auth = await requireAuth(req, allowedRoles);
+  if (auth.response) return { response: auth.response };
+
+  const { session } = auth;
+  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
+    if (options?.emptyPayload) {
+      return { response: NextResponse.json(options.emptyPayload) };
+    }
+    return {
+      response: NextResponse.json(
+        {
+          error:
+            options?.errorMessage ||
+            "School workspace is not configured for this account.",
+        },
+        { status: options?.errorStatus ?? 403 }
+      ),
+    };
+  }
+
+  return {
+    session,
+    schoolId: session.schoolId,
+    schoolObjId: new mongoose.Types.ObjectId(session.schoolId),
+  };
+}
+
 // ============================================================================
 // Teacher Class & Section Assignment Isolation Helpers
 // ============================================================================

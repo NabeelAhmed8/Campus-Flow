@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { School, type ISchoolBankAccount } from "@/models/School";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "parent"]);
+  const auth = await requireSchoolAuth(req, ["admin", "parent"], {
+    emptyPayload: { success: true, bankAccounts: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, bankAccounts: [] });
-  }
+  const { schoolId } = auth;
 
   try {
     await connectDB();
-    const school = await School.findById(session.schoolId).select("bankAccounts name");
+    const school = await School.findById(schoolId).select("bankAccounts name");
     return NextResponse.json({
       success: true,
       bankAccounts: Array.isArray(school?.bankAccounts) ? school.bankAccounts : [],
@@ -27,13 +25,10 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const auth = await requireAuth(req, ["admin"]);
+  const auth = await requireSchoolAuth(req, ["admin"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { schoolId } = auth;
 
   try {
     await connectDB();
@@ -81,7 +76,7 @@ export async function PUT(req: Request) {
       }));
 
     const school = await School.findByIdAndUpdate(
-      session.schoolId,
+      schoolId,
       { $set: { bankAccounts: sanitized } },
       { new: true }
     );

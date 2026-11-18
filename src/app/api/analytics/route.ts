@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Fee } from "@/models/Fee";
 import { Student } from "@/models/Student";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 const MONTH_NAMES = [
   "Jan",
@@ -21,21 +20,19 @@ const MONTH_NAMES = [
 ];
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin"]);
-  if (auth.response) return auth.response;
-
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({
+  const auth = await requireSchoolAuth(req, ["admin"], {
+    emptyPayload: {
       success: true,
       stats: { totalCollected: 0, totalPending: 0, recoveryRate: 0, studentCount: 0 },
       revenueTrend: [],
-    });
-  }
+    },
+  });
+  if (auth.response) return auth.response;
+
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
 
     const [fees, studentCount] = await Promise.all([
       Fee.find({ schoolId: schoolObjId }),

@@ -3,22 +3,20 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Fee } from "@/models/Fee";
 import { CampusNotification } from "@/models/CampusNotification";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 const VALID_FEE_STATUSES = ["paid", "pending", "overdue", "pending_verification"] as const;
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "parent"]);
+  const auth = await requireSchoolAuth(req, ["admin", "parent"], {
+    emptyPayload: { success: true, fees: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, fees: [] });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const query: Record<string, unknown> = { schoolId: schoolObjId };
 
     if (session.role === "parent") {
@@ -41,16 +39,10 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, ["admin", "parent"]);
+  const auth = await requireSchoolAuth(req, ["admin", "parent"]);
   if (auth.response) return auth.response;
 
   const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured for this account." },
-      { status: 403 }
-    );
-  }
 
   try {
     await connectDB();

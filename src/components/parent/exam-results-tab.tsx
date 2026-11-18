@@ -294,19 +294,3 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
     </div>
   );
 }
-overallPct = { overallPct }
-overallGrade = { overallGrade }
-overallVerdict = { overallVerdict }
-  />
-      </div >
-    </div >
-  );
-}
-overallPct = { overallPct }
-overallGrade = { overallGrade }
-overallVerdict = { overallVerdict }
-  />
-      </div >
-    </div >
-  );
-}

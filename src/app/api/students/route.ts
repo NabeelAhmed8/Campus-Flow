@@ -4,21 +4,19 @@ import { connectDB } from "@/lib/db";
 import { Student } from "@/models/Student";
 import { Fee } from "@/models/Fee";
 import { School } from "@/models/School";
-import { buildTeacherClassFilter, requireAuth } from "@/lib/auth";
+import { buildTeacherClassFilter, requireSchoolAuth } from "@/lib/auth";
 import crypto from "node:crypto";
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher", "student", "parent"]);
+  const auth = await requireSchoolAuth(req, ["admin", "teacher", "student", "parent"], {
+    emptyPayload: { success: true, students: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, students: [] });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
 
     // Students see only themselves; Parents see ALL of their own linked children
     if (session.role === "student" || session.role === "parent") {
@@ -87,16 +85,13 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin"]);
+  const auth = await requireSchoolAuth(req, ["admin"], {
+    errorStatus: 400,
+    errorMessage: "School workspace is not initialized. Please sign in again.",
+  });
   if (auth.response) return auth.response;
 
   const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not initialized. Please sign in again." },
-      { status: 400 }
-    );
-  }
 
   try {
     await connectDB();

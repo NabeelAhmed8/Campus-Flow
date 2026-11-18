@@ -7,7 +7,7 @@ import {
   DocumentCategory,
 } from "@/models/CampusDocument";
 import { CampusNotification } from "@/models/CampusNotification";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 import {
   createCampusNotification,
   getAllowedAudiencesForRole,
@@ -77,28 +77,21 @@ function detectSafeMimeType(
 }
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, [
-    "admin",
-    "coordinator",
-    "teacher",
-    "student",
-    "parent",
-  ]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    { emptyPayload: { success: true, documents: [] } }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, documents: [] });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
 
-    const query: Record<string, unknown> = {
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
-    };
+    const query: Record<string, unknown> = { schoolId: schoolObjId };
 
     if (
       category &&
@@ -148,16 +141,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
+  const { session, schoolId } = auth;
 
   try {
     await connectDB();
@@ -256,7 +243,7 @@ export async function POST(req: Request) {
 
     // Broadcast live notification to target portals + Admin oversight
     await createCampusNotification({
-      schoolId: session.schoolId,
+      schoolId,
       category: cleanCategory,
       title: `New ${CATEGORY_TITLES[cleanCategory]} (${fileKindLabel})`,
       message: `${cleanTitle} uploaded for ${scopeLabel}. Tap to view or download.`,
@@ -305,16 +292,10 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -324,7 +305,6 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Invalid document ID." }, { status: 400 });
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const docObjId = new mongoose.Types.ObjectId(id);
 
     await CampusDocument.deleteOne({ _id: docObjId, schoolId: schoolObjId });

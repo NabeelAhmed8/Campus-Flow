@@ -4,20 +4,18 @@ import { connectDB } from "@/lib/db";
 import { LeaveRequest } from "@/models/LeaveRequest";
 import { Student } from "@/models/Student";
 import { CampusNotification } from "@/models/CampusNotification";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator", "teacher", "parent"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator", "teacher", "parent"], {
+    emptyPayload: { success: true, leaves: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, leaves: [] });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const { searchParams } = new URL(req.url);
     const studentIdFilter = searchParams.get("studentId");
 
@@ -57,13 +55,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["parent"]);
+  const auth = await requireSchoolAuth(req, ["parent"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -88,7 +83,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const student = await Student.findOne({ _id: studentId, schoolId: schoolObjId });
     if (!student) {
       return NextResponse.json({ error: "Student record not found." }, { status: 404 });
@@ -131,13 +125,10 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator", "teacher"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator", "teacher"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -151,7 +142,6 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Status must be approved or rejected." }, { status: 400 });
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const leave = await LeaveRequest.findOne({ _id: id, schoolId: schoolObjId });
     if (!leave) {
       return NextResponse.json({ error: "Leave request not found." }, { status: 404 });

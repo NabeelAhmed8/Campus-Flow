@@ -2,20 +2,18 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"], {
+    emptyPayload: { success: true, teachers: [] },
+  });
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, teachers: [] });
-  }
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
 
     // Return both regular teachers and promoted coordinators in this school
     const faculty = await User.find({
@@ -48,16 +46,10 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, ["admin"]);
+  const auth = await requireSchoolAuth(req, ["admin"], { errorStatus: 400 });
   if (auth.response) return auth.response;
 
   const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 400 }
-    );
-  }
 
   try {
     await connectDB();

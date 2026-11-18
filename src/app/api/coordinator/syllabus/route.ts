@@ -2,32 +2,25 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { SyllabusItem } from "@/models/SyllabusItem";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 import { createCampusNotification } from "@/lib/notifications";
 
 const VALID_TERMS = ["first_term", "mid_term", "final_term"] as const;
 const VALID_STATUSES = ["pending", "in_progress", "completed"] as const;
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, [
-    "admin",
-    "coordinator",
-    "teacher",
-    "student",
-    "parent",
-  ]);
+  const auth = await requireSchoolAuth(
+    req,
+    ["admin", "coordinator", "teacher", "student", "parent"],
+    { emptyPayload: { success: true, items: [] } }
+  );
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ success: true, items: [] });
-  }
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
-    const items = await SyllabusItem.find({
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
-    })
+    const items = await SyllabusItem.find({ schoolId: schoolObjId })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -42,13 +35,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { session, schoolId, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -83,7 +73,7 @@ export async function POST(req: Request) {
         : "first_term";
 
     const item = await SyllabusItem.create({
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
+      schoolId: schoolObjId,
       grade: grade.trim().slice(0, 30),
       term: cleanTerm,
       subject: subject.trim().slice(0, 80),
@@ -108,7 +98,7 @@ export async function POST(req: Request) {
         : "Final Term";
 
     await createCampusNotification({
-      schoolId: session.schoolId,
+      schoolId,
       category: "syllabus",
       title: `Syllabus Scheduled — ${item.grade} (${item.subject})`,
       message: `${termLabel}: ${item.chapterTitle}${
@@ -135,13 +125,10 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -226,7 +213,7 @@ export async function PATCH(req: Request) {
     const updated = await SyllabusItem.findOneAndUpdate(
       {
         _id: new mongoose.Types.ObjectId(id),
-        schoolId: new mongoose.Types.ObjectId(session.schoolId),
+        schoolId: schoolObjId,
       },
       { $set: updateSet },
       { new: true }
@@ -248,13 +235,10 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const auth = await requireAuth(req, ["admin", "coordinator"]);
+  const auth = await requireSchoolAuth(req, ["admin", "coordinator"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({ error: "School workspace not configured." }, { status: 403 });
-  }
+  const { schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -266,7 +250,7 @@ export async function DELETE(req: Request) {
 
     await SyllabusItem.deleteOne({
       _id: new mongoose.Types.ObjectId(id),
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
+      schoolId: schoolObjId,
     });
 
     return NextResponse.json({ success: true, message: "Syllabus item deleted." });

@@ -21,7 +21,7 @@ import {
   SyllabusRecord,
 } from "@/components/coordinator/types";
 import { usePortalTab } from "@/hooks/use-portal-tab";
-import { readClientAuthStorage } from "@/lib/client-auth";
+import { useClientAuth } from "@/hooks/use-client-auth";
 
 const COORDINATOR_TABS: readonly CoordinatorTab[] = [
   "teacher-attendance",
@@ -35,23 +35,15 @@ export default function CoordinatorDashboard() {
     COORDINATOR_TABS,
     "teacher-attendance"
   );
-  const [coordinatorName, setCoordinatorName] = useState(
-    "Academic Coordinator"
-  );
-  const [institutionName, setInstitutionName] = useState(
-    "CampusFlow Institution"
-  );
+  const { name: coordinatorName, institution: institutionName } = useClientAuth({
+    name: "Academic Coordinator",
+    institution: "CampusFlow Institution",
+  });
 
   const [faculty, setFaculty] = useState<FacultyMember[]>([]);
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(true);
   const [syllabusItems, setSyllabusItems] = useState<SyllabusRecord[]>([]);
   const [isLoadingSyllabus, setIsLoadingSyllabus] = useState(false);
-
-  useEffect(() => {
-    const auth = readClientAuthStorage();
-    if (auth.name) setCoordinatorName(auth.name);
-    if (auth.institution) setInstitutionName(auth.institution);
-  }, []);
 
   const fetchFaculty = useCallback(async () => {
     setIsLoadingFaculty(true);

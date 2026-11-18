@@ -4,58 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Sparkles, Check, ArrowRight, Clock, Bell, RefreshCw, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
 import type { LandingAuthState } from "./landing-navbar";
-
-const PRICING_PLANS = [
-  {
-    id: "starter",
-    name: "Starter Campus",
-    tagline: "Ideal for growing primary & middle schools",
-    pricePkr: 4900,
-    priceUsd: 19,
-    limit: "Up to 250 Students",
-    popular: false,
-    features: [
-      "All 5 Portals (Admin, Coordinator, Teacher, Student, Parent)",
-      "3-Term Exam Report Cards & Section RBAC",
-      "PDF & Image Timetable, Syllabus & Date Sheet Uploads",
-      "Pakistani Bank, Raast & Mobile Wallet Fee Vouchers",
-      "Real-Time Campus Notification Bell",
-    ],
-  },
-  {
-    id: "growth",
-    name: "Growth Academy",
-    tagline: "Complete AI-powered suite for high schools & colleges",
-    pricePkr: 9900,
-    priceUsd: 39,
-    limit: "Up to 1,000 Students",
-    popular: true,
-    features: [
-      "Everything in Starter Campus",
-      "Gemini AI Lesson Planner, Quiz Maker & Study Coach",
-      "Academic Coordinator Attendance & Substitution Desk",
-      "Automated 3-Day Advance Email & Admin Bell Renewal Alerts",
-      "Flexible Auto-Renew Toggle & Cancel Anytime",
-    ],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise Network",
-    tagline: "Unlimited capacity for multi-section school networks",
-    pricePkr: 19900,
-    priceUsd: 79,
-    limit: "Unlimited Students & Sections",
-    popular: false,
-    features: [
-      "Everything in Growth Academy",
-      "Unlimited Faculty, Coordinators & Enrolled Students",
-      "Complete Financial Analytics & Admin Oversight Audit",
-      "Dedicated Onboarding & Priority Institution Support",
-      "Custom School Join Code & Multi-Child Parent Linking",
-    ],
-  },
-];
 
 interface LandingPricingProps {
   authState: LandingAuthState;
@@ -109,7 +59,7 @@ export function LandingPricing({ authState }: LandingPricingProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {PRICING_PLANS.map((plan) => {
+            {SUBSCRIPTION_PLANS.map((plan) => {
               const ctaHref =
                 authState.isLoggedIn && authState.role === "admin"
                   ? "/admin?tab=subscription"
@@ -151,7 +101,7 @@ export function LandingPricing({ authState }: LandingPricingProps) {
                         </span>
                         <span className="text-xs text-muted-foreground font-medium">/month</span>
                       </div>
-                      <p className="text-xs text-primary font-semibold mt-1">{plan.limit}</p>
+                      <p className="text-xs text-primary font-semibold mt-1">{plan.studentLimit}</p>
                     </div>
 
                     <ul className="space-y-2.5 pt-4 border-t text-xs text-foreground">

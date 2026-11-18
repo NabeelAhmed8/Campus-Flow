@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireSchoolAuth } from "@/lib/auth";
 import { getPlanById } from "@/lib/subscription";
 import { PaymentOrder } from "@/models/PaymentOrder";
 import {
@@ -12,16 +12,10 @@ import {
 } from "@/lib/safepay";
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin"]);
+  const auth = await requireSchoolAuth(req, ["admin"]);
   if (auth.response) return auth.response;
 
   const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured." },
-      { status: 403 }
-    );
-  }
 
   const cfg = getSafepayConfig();
   if (!cfg.configured) {

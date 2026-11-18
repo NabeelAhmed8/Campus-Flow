@@ -7,23 +7,22 @@ import {
   buildTeacherClassFilter,
   isStudentInTeacherScope,
   isValidDateString,
-  requireAuth,
+  requireSchoolAuth,
 } from "@/lib/auth";
 
 const VALID_ATTENDANCE_STATUSES = ["present", "absent", "late", "excused"] as const;
 
 export async function GET(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher", "student", "parent"]);
-  if (auth.response) return auth.response;
-
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json({
+  const auth = await requireSchoolAuth(req, ["admin", "teacher", "student", "parent"], {
+    emptyPayload: {
       success: true,
       records: [],
       stats: { total: 0, present: 0, absent: 0, late: 0, excused: 0, attendancePercentage: 100 },
-    });
-  }
+    },
+  });
+  if (auth.response) return auth.response;
+
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -32,7 +31,6 @@ export async function GET(req: Request) {
     const studentId = searchParams.get("studentId");
     const grade = searchParams.get("grade");
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const query: Record<string, unknown> = { schoolId: schoolObjId };
 
     if (date) {
@@ -139,16 +137,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const auth = await requireAuth(req, ["admin", "teacher"]);
+  const auth = await requireSchoolAuth(req, ["admin", "teacher"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
-  if (!session.schoolId || !mongoose.Types.ObjectId.isValid(session.schoolId)) {
-    return NextResponse.json(
-      { error: "School workspace is not configured for this account." },
-      { status: 403 }
-    );
-  }
+  const { session, schoolObjId } = auth;
 
   try {
     await connectDB();
@@ -170,7 +162,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
     const teacher = session.name || "Faculty Educator";
 
     let updatedCount = 0;

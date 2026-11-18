@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Users, ReceiptText, LayoutDashboard, CreditCard, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { WorkspaceTabs } from "@/components/ui/workspace-tabs";
@@ -8,7 +8,7 @@ import { SubscriptionManager } from "@/components/subscription-manager";
 import { generateFeeVoucherPDF } from "@/lib/pdf-generator";
 import { exportToExcel } from "@/lib/excel-generator";
 import { GRADE_OPTIONS } from "@/lib/constants";
-import { readClientAuthStorage } from "@/lib/client-auth";
+import { useClientAuth } from "@/hooks/use-client-auth";
 import { usePortalTab } from "@/hooks/use-portal-tab";
 import { useAdminData } from "@/hooks/use-admin-data";
 import { useAdminModals } from "@/hooks/use-admin-modals";
@@ -17,11 +17,9 @@ import { AnalyticsTab } from "@/components/admin/analytics-tab";
 import { StudentsTab } from "@/components/admin/students-tab";
 import { BillingTab } from "@/components/admin/billing-tab";
 import { FacultyTab } from "@/components/admin/faculty-tab";
-import {
-  StudentAdmissionModal,
-  RecordBankPaymentModal,
-  PaymentAuditModal,
-} from "@/components/admin/admin-modals";
+import { StudentAdmissionModal } from "@/components/admin/admission-modal";
+import { RecordBankPaymentModal } from "@/components/admin/bank-payment-modal";
+import { PaymentAuditModal } from "@/components/admin/payment-audit-modal";
 import { BankSettingsModal } from "@/components/admin/bank-settings-modal";
 import type { AdminFee, AdminTab } from "@/components/admin/types";
 
@@ -53,8 +51,7 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [gradeFilter, setGradeFilter] = useState("all");
   const [feeStatusFilter, setFeeStatusFilter] = useState("all");
-  const [institutionName, setInstitutionName] = useState("CampusFlow");
-  const [schoolCode, setSchoolCode] = useState("");
+  const { institution: institutionName, schoolCode } = useClientAuth();
 
   const modals = useAdminModals({
     onSuccessRefresh: fetchLiveDB,
@@ -63,18 +60,6 @@ export default function AdminPage() {
       setGradeFilter("all");
     },
   });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const syncInstitution = () => {
-      const auth = readClientAuthStorage();
-      if (auth.institution) setInstitutionName(auth.institution);
-      if (auth.schoolCode) setSchoolCode(auth.schoolCode);
-    };
-    syncInstitution();
-    window.addEventListener("campusflow_institution_updated", syncInstitution);
-    return () => window.removeEventListener("campusflow_institution_updated", syncInstitution);
-  }, []);
 
   const schoolClassSectionCombos = useMemo(() => {
     const map = new Map<string, { grade: string; section: string; count: number }>();

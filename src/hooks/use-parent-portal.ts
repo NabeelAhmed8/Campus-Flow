@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { generateFeeVoucherPDF } from "@/lib/pdf-generator";
-import { readClientAuthStorage } from "@/lib/client-auth";
+import { useClientAuth } from "@/hooks/use-client-auth";
 import { toIsoDate } from "@/lib/format";
 import type { SchoolBankAccount } from "@/components/parent/types";
 import type {
@@ -19,7 +19,7 @@ export function useParentPortal() {
   const [feeRecord, setFeeRecord] = useState<FeeDomainRecord | null>(null);
   const [bankAccounts, setBankAccounts] = useState<SchoolBankAccount[]>([]);
   const [attendanceStats, setAttendanceStats] = useState<AttendanceStatsRecord | null>(null);
-  const [institutionName, setInstitutionName] = useState("CampusFlow");
+  const { institution: institutionName } = useClientAuth();
 
   const [showBankModal, setShowBankModal] = useState(false);
   const [selectedBankId, setSelectedBankId] = useState("");
@@ -31,17 +31,6 @@ export function useParentPortal() {
   const [showLinkChildModal, setShowLinkChildModal] = useState(false);
   const [childRollInput, setChildRollInput] = useState("");
   const [linkingChild, setLinkingChild] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const syncInst = () => {
-      const auth = readClientAuthStorage();
-      if (auth.institution) setInstitutionName(auth.institution);
-    };
-    syncInst();
-    window.addEventListener("campusflow_institution_updated", syncInst);
-    return () => window.removeEventListener("campusflow_institution_updated", syncInst);
-  }, []);
 
   const fetchParentData = useCallback(async () => {
     try {
