@@ -39,22 +39,14 @@ async function handleCallback(
 
     const cfg = getSafepayConfig();
 
-    // Verify cryptographic Safepay callback signature (HMAC-SHA256(V1_SECRET, tracker))
-    if (cfg.v1Secret) {
-      const validSig = verifySafepayCallbackSignature(tracker, sig);
-      if (!validSig) {
-        console.warn(
-          "[SAFEPAY_CALLBACK] Signature mismatch or missing; deferring fulfillment to signed webhook.",
-          { hasTracker: Boolean(tracker), hasSig: Boolean(sig), orderId }
-        );
-        return NextResponse.redirect(
-          `${origin}/admin?tab=subscription&payment=pending`,
-          303
-        );
-      }
-    } else if (!tracker && !orderId) {
+    // Always require a valid cryptographic Safepay callback signature before activating
+    if (!cfg.v1Secret || !tracker || !verifySafepayCallbackSignature(tracker, sig)) {
+      console.warn(
+        "[SAFEPAY_CALLBACK] Missing or invalid Safepay callback signature; refusing unverified activation.",
+        { hasSecret: Boolean(cfg.v1Secret), hasTracker: Boolean(tracker), hasSig: Boolean(sig), orderId }
+      );
       return NextResponse.redirect(
-        `${origin}/admin?tab=subscription&payment=failed`,
+        `${origin}/admin?tab=subscription&payment=pending`,
         303
       );
     }

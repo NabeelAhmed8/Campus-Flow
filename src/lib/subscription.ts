@@ -211,73 +211,9 @@ export async function evaluateAndSyncSchoolSubscription(
   }
 
   const nowMs = now.getTime();
-  const isPaidPlan = sub.planId !== "trial";
 
-  // 1. Automatic Monthly Renewal Engine (when paid plan reaches period end with Auto-Renew ON)
-  if (
-    isPaidPlan &&
-    nowMs >= periodEndMs &&
-    sub.autoRenew &&
-    !sub.cancelAtPeriodEnd &&
-    sub.paymentMethod?.label
-  ) {
-    const newStart = new Date(nowMs);
-    const newEnd = new Date(nowMs + MONTHLY_CYCLE_DAYS * DAY_MS);
-    const newGrace = new Date(newEnd.getTime() + GRACE_PERIOD_HOURS * HOUR_MS);
-    const invoiceId = `INV-AR-${now.getFullYear()}${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    sub.status = "active";
-    sub.currentPeriodStart = newStart;
-    sub.currentPeriodEnd = newEnd;
-    sub.graceEndsAt = newGrace;
-    sub.billingHistory.unshift({
-      invoiceId,
-      planId: sub.planId,
-      planName: sub.planName,
-      amountPkr: sub.pricePkr,
-      amountUsd: sub.priceUsd,
-      paymentMethod: sub.paymentMethod.label,
-      status: "auto_renewed",
-      paidAt: newStart,
-      periodStart: newStart,
-      periodEnd: newEnd,
-    });
-    dirty = true;
-
-    const adminContact = await resolveSchoolAdminContact(school);
-    const amountLabel = `PKR ${sub.pricePkr.toLocaleString()} ($${sub.priceUsd})`;
-
-    await createCampusNotification({
-      schoolId: school._id.toString(),
-      category: "billing",
-      title: `Subscription Auto-Renewed — ${sub.planName}`,
-      message: `Your monthly ${sub.planName} (${amountLabel}) was automatically renewed through ${formatDateShort(
-        newEnd
-      )}. Invoice: ${invoiceId}.`,
-      audience: "admin",
-      grade: "All Classes",
-      priority: "normal",
-      createdBy: "CampusFlow Billing",
-      senderRole: "admin",
-    });
-
-    if (adminContact?.email) {
-      sendSubscriptionEmail({
-        to: adminContact.email,
-        name: adminContact.name,
-        institution: school.name,
-        eventType: "auto_renewed",
-        planName: sub.planName,
-        periodEndDate: formatDateShort(newEnd),
-        amountLabel,
-        invoiceId,
-      }).catch(() => null);
-    }
-  }
-
-  // Re-read period timestamps after potential auto-renewal
+  // Note: Paid renewals are ONLY extended upon verified Safepay payment fulfillment
+  // (`fulfillPaidSubscriptionOrder` via signed webhook/callback) — never granted free without settlement.
   const updatedPeriodEndMs = new Date(sub.currentPeriodEnd).getTime();
   const updatedGraceEndMs = new Date(sub.graceEndsAt).getTime();
 

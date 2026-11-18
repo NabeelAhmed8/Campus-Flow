@@ -12,6 +12,17 @@ export interface SafepayConfig {
   checkoutBaseUrl: string;
 }
 
+function isPlaceholderSecret(val: string): boolean {
+  const lower = val.trim().toLowerCase();
+  return (
+    !lower ||
+    lower.includes("your_safepay") ||
+    lower.includes("your_production") ||
+    lower.includes("sec_xxxx") ||
+    lower.includes("change_me")
+  );
+}
+
 export function getSafepayConfig(): SafepayConfig {
   const rawKey = (process.env.SAFEPAY_API_KEY || "").trim();
   const rawV1Secret = (process.env.SAFEPAY_V1_SECRET || "").trim();
@@ -20,10 +31,11 @@ export function getSafepayConfig(): SafepayConfig {
   const environment: SafepayEnvironment =
     envRaw === "sandbox" ? "sandbox" : "production";
 
-  const isPlaceholder =
-    !rawKey ||
-    rawKey.includes("your_safepay") ||
-    rawKey.includes("sec_xxxx");
+  const cleanKey = isPlaceholderSecret(rawKey) ? "" : rawKey;
+  const cleanV1Secret = isPlaceholderSecret(rawV1Secret) ? "" : rawV1Secret;
+  const cleanWebhookSecret = isPlaceholderSecret(rawWebhookSecret)
+    ? ""
+    : rawWebhookSecret;
 
   const apiBaseUrl =
     environment === "production"
@@ -36,11 +48,11 @@ export function getSafepayConfig(): SafepayConfig {
       : "https://sandbox.api.getsafepay.com/components";
 
   return {
-    configured: !isPlaceholder,
+    configured: Boolean(cleanKey && cleanV1Secret && cleanWebhookSecret),
     environment,
-    apiKey: rawKey,
-    v1Secret: rawV1Secret,
-    webhookSecret: rawWebhookSecret,
+    apiKey: cleanKey,
+    v1Secret: cleanV1Secret,
+    webhookSecret: cleanWebhookSecret,
     apiBaseUrl,
     checkoutBaseUrl,
   };
