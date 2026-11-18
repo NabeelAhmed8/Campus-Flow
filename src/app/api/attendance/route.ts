@@ -153,7 +153,7 @@ export async function POST(req: Request) {
   try {
     await connectDB();
     const body = await req.json();
-    const { date, teacherName, records } = body ?? {};
+    const { date, records } = body ?? {};
 
     if (
       typeof date !== "string" ||
@@ -171,10 +171,7 @@ export async function POST(req: Request) {
     }
 
     const schoolObjId = new mongoose.Types.ObjectId(session.schoolId);
-    const teacher =
-      typeof teacherName === "string" && teacherName.trim()
-        ? teacherName.trim().slice(0, 100)
-        : session.name || "Faculty Educator";
+    const teacher = session.name || "Faculty Educator";
 
     let updatedCount = 0;
 

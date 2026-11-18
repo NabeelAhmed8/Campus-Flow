@@ -227,10 +227,6 @@ export function GradebookTab({
       return;
     }
 
-    const activeTeacherName =
-      (typeof window !== "undefined" && localStorage.getItem("campusflow_user_name")) ||
-      "Faculty Instructor";
-
     setSubmittingGrade(true);
     try {
       const res = await fetch("/api/students/grade", {
@@ -245,7 +241,6 @@ export function GradebookTab({
           totalMarks,
           obtainedMarks: examStatus === "absent" ? 0 : Number(obtainedMarks),
           feedback: teacherFeedback.trim() || undefined,
-          teacherName: activeTeacherName,
         }),
       });
 

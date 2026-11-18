@@ -125,7 +125,6 @@ export async function POST(req: Request) {
       totalMarks,
       obtainedMarks,
       feedback,
-      teacherName,
     } = body ?? {};
 
     if (
@@ -228,10 +227,7 @@ export async function POST(req: Request) {
           : resultStatus === "pass"
           ? "Good performance in this examination cycle."
           : "Needs focused improvement to meet the 40% passing standard.",
-      teacherName:
-        typeof teacherName === "string" && teacherName.trim()
-          ? teacherName.trim().slice(0, 100)
-          : session.name || "Faculty Instructor",
+      teacherName: session.name || "Faculty Instructor",
       recordedAt: new Date(),
     };
 

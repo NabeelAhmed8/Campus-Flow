@@ -121,11 +121,10 @@ export function TeacherAttendanceTab({
       ...uniqueSections.map((sec) => ({
         value: sec,
         label: `Section ${sec}`,
-        badge: `${
-          studentsInAttendanceGrade.filter(
-            (s) => (s.section || "A").trim().toLowerCase() === sec.toLowerCase()
-          ).length
-        }`,
+        badge: `${studentsInAttendanceGrade.filter(
+          (s) => (s.section || "A").trim().toLowerCase() === sec.toLowerCase()
+        ).length
+          }`,
       })),
     ];
   })();
@@ -194,13 +193,13 @@ export function TeacherAttendanceTab({
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: attendanceDate, teacherName, records }),
+        body: JSON.stringify({ date: attendanceDate, records }),
       });
       const data = await res.json();
       if (data.success) {
         toast.success(
           data.message ||
-            `Daily attendance for ${records.length} students successfully recorded for ${attendanceDate}.`
+          `Daily attendance for ${records.length} students successfully recorded for ${attendanceDate}.`
         );
         fetchAttendanceForDate(attendanceDate);
       } else {
@@ -333,11 +332,10 @@ export function TeacherAttendanceTab({
                     </>
                   ) : (
                     <span
-                      className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                        lv.status === "approved"
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                          : "bg-destructive/15 text-destructive"
-                      }`}
+                      className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${lv.status === "approved"
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                        : "bg-destructive/15 text-destructive"
+                        }`}
                     >
                       {lv.status}
                     </span>
@@ -464,11 +462,10 @@ export function TeacherAttendanceTab({
                               key={btn.id}
                               type="button"
                               onClick={() => handleStatusChange(st._id, btn.id)}
-                              className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
-                                currentStatus === btn.id
-                                  ? `${btn.activeCls} text-white font-semibold shadow-xs`
-                                  : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-                              }`}
+                              className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${currentStatus === btn.id
+                                ? `${btn.activeCls} text-white font-semibold shadow-xs`
+                                : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+                                }`}
                             >
                               {btn.label}
                             </button>
