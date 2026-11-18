@@ -153,11 +153,10 @@ export function CampusDocumentsPanel({
                 key={tab.key}
                 type="button"
                 onClick={() => setCategoryTab(tab.key)}
-                className={`flex items-center justify-center sm:justify-start gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                  active
-                    ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                    : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-transparent"
-                }`}
+                className={`flex items-center justify-center sm:justify-start gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${active
+                  ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                  : "bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/60 border-transparent"
+                  }`}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{tab.label}</span>
@@ -192,17 +191,16 @@ export function CampusDocumentsPanel({
         file={
           previewDoc
             ? {
-                title: previewDoc.title,
-                fileName: previewDoc.fileName,
-                subtitle: `${previewDoc.fileName} • ${previewDoc.grade}${
-                  previewDoc.section && previewDoc.section !== "All Sections"
-                    ? ` • Sec ${previewDoc.section}`
-                    : ""
+              title: previewDoc.title,
+              fileName: previewDoc.fileName,
+              subtitle: `${previewDoc.fileName} • ${previewDoc.grade}${previewDoc.section && previewDoc.section !== "All Sections"
+                ? ` • Sec ${previewDoc.section}`
+                : ""
                 }`,
-                mimeType: previewDoc.mimeType,
-                fileUrl: previewDoc.fileUrl,
-                downloadUrl: previewDoc.downloadUrl,
-              }
+              mimeType: previewDoc.mimeType,
+              fileUrl: previewDoc.fileUrl,
+              downloadUrl: previewDoc.downloadUrl,
+            }
             : null
         }
         onClose={() => setPreviewDoc(null)}
