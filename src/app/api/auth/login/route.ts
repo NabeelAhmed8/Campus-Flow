@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       name: user.name,
       email: user.email,
       role: user.role,
-      institution: user.institution || "St. Jude Collegiate Academy",
+      institution: user.institution || "CampusFlow Institution",
       schoolId,
       schoolCode,
       linkedStudentId: user.linkedStudentId?.toString(),

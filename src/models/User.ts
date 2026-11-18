@@ -34,7 +34,7 @@ const UserSchema = new Schema<IUser>(
       default: "admin",
       required: true,
     },
-    institution: { type: String, default: "St. Jude Collegiate Academy", trim: true },
+    institution: { type: String, default: "CampusFlow Institution", trim: true },
     extraField: { type: String, trim: true },
     schoolId: { type: Schema.Types.ObjectId, ref: "School", index: true },
     schoolCode: { type: String, uppercase: true, trim: true, index: true },

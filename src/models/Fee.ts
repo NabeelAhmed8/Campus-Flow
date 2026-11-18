@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export type FeeStatus = "paid" | "pending" | "overdue" | "pending_verification";
+
 export interface IFee extends Document {
   schoolId?: mongoose.Types.ObjectId;
   studentId: mongoose.Types.ObjectId;
@@ -10,10 +12,12 @@ export interface IFee extends Document {
   month: string;
   dueDate: Date;
   paidDate?: Date;
-  status: "paid" | "pending" | "overdue";
+  submittedAt?: Date;
+  status: FeeStatus;
   invoiceNumber: string;
   paymentMethod?: string;
   transactionRef?: string;
+  depositorName?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,20 +33,33 @@ const FeeSchema = new Schema<IFee>(
     month: { type: String, required: true },
     dueDate: { type: Date, required: true },
     paidDate: { type: Date },
+    submittedAt: { type: Date },
     status: {
       type: String,
-      enum: ["paid", "pending", "overdue"],
+      enum: ["paid", "pending", "overdue", "pending_verification"],
       default: "pending",
     },
     invoiceNumber: { type: String, required: true, unique: true },
     paymentMethod: { type: String, default: "" },
     transactionRef: { type: String, default: "" },
+    depositorName: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-if (mongoose.models.Fee && !mongoose.models.Fee.schema.path("schoolId")) {
-  mongoose.deleteModel("Fee");
+const existingFeeModel = mongoose.models.Fee;
+if (existingFeeModel) {
+  const statusPath = existingFeeModel.schema.path("status") as
+    | { enumValues?: string[] }
+    | undefined;
+  const hasPendingVerif = statusPath?.enumValues?.includes("pending_verification");
+  if (
+    !existingFeeModel.schema.path("schoolId") ||
+    !existingFeeModel.schema.path("depositorName") ||
+    !hasPendingVerif
+  ) {
+    mongoose.deleteModel("Fee");
+  }
 }
 
 export const Fee: Model<IFee> =

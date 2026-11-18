@@ -45,11 +45,22 @@ export interface ISchoolSubscription {
   billingHistory: IBillingHistoryItem[];
 }
 
+export interface ISchoolBankAccount {
+  id: string;
+  bankName: string;
+  badge: string;
+  accountTitle: string;
+  accountNo: string;
+  iban: string;
+  branch: string;
+}
+
 export interface ISchool extends Document {
   name: string;
   code: string;
   ownerId?: mongoose.Types.ObjectId;
   subscription?: ISchoolSubscription;
+  bankAccounts?: ISchoolBankAccount[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +123,19 @@ const SubscriptionSchema = new Schema<ISchoolSubscription>(
   { _id: false }
 );
 
+const SchoolBankAccountSchema = new Schema<ISchoolBankAccount>(
+  {
+    id: { type: String, required: true, trim: true },
+    bankName: { type: String, required: true, trim: true },
+    badge: { type: String, default: "Bank Transfer", trim: true },
+    accountTitle: { type: String, required: true, trim: true },
+    accountNo: { type: String, required: true, trim: true },
+    iban: { type: String, default: "", trim: true },
+    branch: { type: String, default: "", trim: true },
+  },
+  { _id: false }
+);
+
 const SchoolSchema = new Schema<ISchool>(
   {
     name: { type: String, required: true, trim: true },
@@ -125,13 +149,18 @@ const SchoolSchema = new Schema<ISchool>(
     },
     ownerId: { type: Schema.Types.ObjectId, ref: "User" },
     subscription: { type: SubscriptionSchema, required: false },
+    bankAccounts: { type: [SchoolBankAccountSchema], default: [] },
   },
   { timestamps: true }
 );
 
 // Guard against stale Mongoose schema cache during Next.js dev HMR
 const existingSchoolModel = mongoose.models.School;
-if (existingSchoolModel && !existingSchoolModel.schema.path("subscription")) {
+if (
+  existingSchoolModel &&
+  (!existingSchoolModel.schema.path("subscription") ||
+    !existingSchoolModel.schema.path("bankAccounts"))
+) {
   mongoose.deleteModel("School");
 }
 

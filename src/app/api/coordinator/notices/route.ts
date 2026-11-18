@@ -3,7 +3,10 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { CoordinatorNotice } from "@/models/CoordinatorNotice";
 import { requireAuth } from "@/lib/auth";
-import { createCampusNotification } from "@/lib/notifications";
+import {
+  createCampusNotification,
+  getAllowedAudiencesForRole,
+} from "@/lib/notifications";
 
 const VALID_TYPES = ["datesheet", "circular", "substitution", "ptm"] as const;
 const VALID_AUDIENCES = ["all", "teachers", "parents", "students"] as const;
@@ -25,9 +28,15 @@ export async function GET(req: Request) {
 
   try {
     await connectDB();
-    const notices = await CoordinatorNotice.find({
+    const query: Record<string, unknown> = {
       schoolId: new mongoose.Types.ObjectId(session.schoolId),
-    })
+    };
+    const allowedAudiences = getAllowedAudiencesForRole(session.role);
+    if (allowedAudiences) {
+      query.audience = { $in: allowedAudiences };
+    }
+
+    const notices = await CoordinatorNotice.find(query)
       .sort({ createdAt: -1 })
       .lean();
 

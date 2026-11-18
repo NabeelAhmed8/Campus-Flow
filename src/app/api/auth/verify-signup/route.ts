@@ -159,7 +159,7 @@ export async function POST(req: Request) {
       email: normalizedEmail,
       password: pending.passwordHash,
       role: pending.role,
-      institution: pending.institution || "St. Jude Collegiate Academy",
+      institution: pending.institution || "CampusFlow Institution",
       extraField: pending.extraField,
       schoolId:
         pending.schoolId && mongoose.Types.ObjectId.isValid(pending.schoolId)
@@ -176,7 +176,7 @@ export async function POST(req: Request) {
 
     if (pending.role === "admin") {
       const createdSchool = await createSchoolForAdmin({
-        institutionName: user.institution || "St. Jude Collegiate Academy",
+        institutionName: user.institution || "CampusFlow Institution",
         ownerId: user._id as mongoose.Types.ObjectId,
       });
       user.schoolId = createdSchool.schoolId;
@@ -194,7 +194,7 @@ export async function POST(req: Request) {
       name: user.name,
       email: user.email,
       role: pending.role,
-      institution: user.institution || "St. Jude Collegiate Academy",
+      institution: user.institution || "CampusFlow Institution",
       schoolId: schoolIdStr,
       schoolCode: schoolCodeStr,
       linkedStudentId: user.linkedStudentId?.toString(),

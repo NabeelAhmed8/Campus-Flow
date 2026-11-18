@@ -1,5 +1,12 @@
 import jsPDF from "jspdf";
 
+export interface VoucherBankAccount {
+  bankName: string;
+  accountTitle: string;
+  accountNo: string;
+  iban?: string;
+}
+
 export interface FeeVoucherData {
   invoiceNumber: string;
   studentName: string;
@@ -12,16 +19,19 @@ export interface FeeVoucherData {
   institution?: string;
   paymentMethod?: string;
   transactionRef?: string;
+  bankAccounts?: VoucherBankAccount[];
 }
 
 export function generateFeeVoucherPDF(data: FeeVoucherData): jsPDF {
   const doc = new jsPDF();
-  const isPaid = data.status.toLowerCase() === "paid";
+  const statusLower = data.status.toLowerCase();
+  const isPaid = statusLower === "paid";
+  const isVerifying = statusLower === "pending_verification";
 
   // Header
   doc.setFontSize(20);
   doc.setTextColor(20, 20, 20);
-  doc.text(data.institution || "CampusFlow Academy", 20, 25);
+  doc.text(data.institution || "CampusFlow Institution", 20, 25);
   doc.setFontSize(10);
   doc.setTextColor(100);
   doc.text(
@@ -50,10 +60,13 @@ export function generateFeeVoucherPDF(data: FeeVoucherData): jsPDF {
   doc.setFont("helvetica", "bold");
   if (isPaid) {
     doc.setTextColor(16, 149, 93);
-    doc.text(`Status: PAID (CLEARED)`, 20, 78);
+    doc.text("Status: PAID (CLEARED)", 20, 78);
+  } else if (isVerifying) {
+    doc.setTextColor(2, 132, 199);
+    doc.text("Status: PENDING ADMIN VERIFICATION", 20, 78);
   } else {
     doc.setTextColor(217, 119, 6);
-    doc.text(`Status: UNPAID (PENDING)`, 20, 78);
+    doc.text("Status: UNPAID (PENDING)", 20, 78);
   }
   doc.setTextColor(40);
   doc.setFont("helvetica", "normal");
@@ -68,18 +81,18 @@ export function generateFeeVoucherPDF(data: FeeVoucherData): jsPDF {
   // Item
   doc.setFont("helvetica", "normal");
   doc.text(`Tuition & Institutional Fee - ${data.month}`, 25, 108);
-  doc.text(`Rs. ${data.amount.toLocaleString()}`, 150, 108);
+  doc.text(`Rs. ${Number(data.amount || 0).toLocaleString()}`, 150, 108);
 
   // Total
   doc.line(20, 118, 190, 118);
   doc.setFont("helvetica", "bold");
   doc.text("Total Payable:", 110, 126);
-  doc.text(`Rs. ${data.amount.toLocaleString()}`, 150, 126);
+  doc.text(`Rs. ${Number(data.amount || 0).toLocaleString()}`, 150, 126);
 
   // Payment Instruction / Cleared Stamp Box
   doc.setDrawColor(220);
   doc.setFillColor(248, 248, 250);
-  doc.rect(20, 138, 170, 45, "FD");
+  doc.rect(20, 138, 170, 48, "FD");
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
@@ -90,36 +103,51 @@ export function generateFeeVoucherPDF(data: FeeVoucherData): jsPDF {
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60);
     doc.text(
-      `Payment Method: ${data.paymentMethod || "Pakistani Local Bank Transfer"}`,
+      `Payment Method: ${data.paymentMethod || "Official Campus Payment"}`,
       25,
       156
     );
     doc.text(
-      `Transaction Ref / Challan No: ${data.transactionRef || "TRX-VERIFIED"}`,
+      `Transaction Ref / Challan No: ${data.transactionRef || "Counter Receipt"}`,
       25,
       165
     );
     doc.text(
-      "This document serves as an official cleared tax invoice & payment receipt.",
+      "This document serves as an official cleared payment receipt.",
       25,
       174
     );
   } else {
     doc.setTextColor(30);
-    doc.text("PAYABLE VIA PAKISTANI LOCAL BANKS / 1LINK / RAAST", 25, 147);
+    doc.text("OFFICIAL INSTITUTIONAL PAYMENT CHANNELS", 25, 147);
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
     doc.setTextColor(70);
-    doc.text("Bank: Meezan Bank Ltd | HBL (Habib Bank Limited)", 25, 156);
-    doc.text(
-      "Account Title: CampusFlow Fee Collection | IBAN: PK42MEZN0001020105829101",
-      25,
-      165
-    );
-    doc.text(
-      "Raast Pay ID: 03001234567 | EasyPaisa / JazzCash Till: 0300-1234567",
-      25,
-      174
-    );
+
+    const accounts = Array.isArray(data.bankAccounts) ? data.bankAccounts.slice(0, 3) : [];
+    if (accounts.length > 0) {
+      accounts.forEach((acc, idx) => {
+        const y = 156 + idx * 9;
+        const ibanPart = acc.iban ? ` | IBAN: ${acc.iban}` : "";
+        doc.text(
+          `${acc.bankName} — ${acc.accountTitle} | A/C: ${acc.accountNo}${ibanPart}`,
+          25,
+          y,
+          { maxWidth: 160 }
+        );
+      });
+    } else {
+      doc.text(
+        "Please pay via your school's official bank account or accounts counter and submit the",
+        25,
+        158
+      );
+      doc.text(
+        "deposit slip / transaction reference ID in the Parent Portal for verification.",
+        25,
+        166
+      );
+    }
   }
 
   // Footer notes
@@ -129,9 +157,9 @@ export function generateFeeVoucherPDF(data: FeeVoucherData): jsPDF {
   doc.text(
     "Please retain this voucher for institutional audit and academic clearance.",
     20,
-    196
+    198
   );
-  doc.text("Generated securely via CampusFlow SaaS Micro-Billing Engine.", 20, 202);
+  doc.text("Generated via CampusFlow Institutional Billing.", 20, 204);
 
   return doc;
 }

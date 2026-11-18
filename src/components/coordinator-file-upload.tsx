@@ -8,14 +8,15 @@ import {
   Eye,
   Download,
   Trash2,
-  X,
-  ExternalLink,
   Bell,
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { CustomSelect } from "@/components/ui/custom-select";
+import { FilePreviewModal } from "@/components/ui/file-preview-modal";
+import { ALL_CLASSES_GRADE_OPTIONS, TERM_OPTIONS } from "@/lib/constants";
+import { formatFileSize } from "@/lib/format";
 
 type UploadCategory = "timetable" | "syllabus" | "datesheet";
 
@@ -77,16 +78,6 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
-const GRADE_OPTIONS = [
-  { value: "All Classes", label: "All Classes" },
-  { value: "Grade 7", label: "Grade 7" },
-  { value: "Grade 8", label: "Grade 8" },
-  { value: "Grade 9", label: "Grade 9" },
-  { value: "Grade 10", label: "Grade 10" },
-  { value: "Grade 11", label: "Grade 11" },
-  { value: "Grade 12", label: "Grade 12" },
-];
-
 const AUDIENCE_OPTIONS = [
   { value: "all", label: "All Campus (Teachers, Students & Parents)" },
   { value: "teachers", label: "Teachers Only" },
@@ -94,18 +85,10 @@ const AUDIENCE_OPTIONS = [
   { value: "students", label: "Students Only" },
 ];
 
-const TERM_OPTIONS = [
+const UPLOAD_TERM_OPTIONS = [
   { value: "", label: "General / All Terms" },
-  { value: "first_term", label: "First Term" },
-  { value: "mid_term", label: "2nd / Mid-Term" },
-  { value: "final_term", label: "Final Term" },
+  ...TERM_OPTIONS,
 ];
-
-function formatBytes(bytes: number): string {
-  if (!bytes || bytes < 1024) return `${bytes || 0} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
 
 export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) {
   const cfg = CATEGORY_CONFIG[category];
@@ -275,11 +258,10 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className={`w-full rounded-xl border-2 border-dashed p-4 text-center transition-all flex flex-col items-center justify-center gap-1.5 ${
-                selectedFile
-                  ? "border-emerald-500/60 bg-emerald-500/5"
-                  : "border-border hover:border-primary/60 hover:bg-muted/30"
-              }`}
+              className={`w-full rounded-xl border-2 border-dashed p-4 text-center transition-all flex flex-col items-center justify-center gap-1.5 ${selectedFile
+                ? "border-emerald-500/60 bg-emerald-500/5"
+                : "border-border hover:border-primary/60 hover:bg-muted/30"
+                }`}
             >
               {selectedFile ? (
                 <>
@@ -288,7 +270,7 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
                     {selectedFile.name}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    {formatBytes(selectedFile.size)} • Click to change file
+                    {formatFileSize(selectedFile.size)} • Click to change file
                   </span>
                 </>
               ) : (
@@ -337,7 +319,7 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
                 id={`upload-grade-${category}`}
                 value={grade}
                 onChange={setGrade}
-                options={GRADE_OPTIONS}
+                options={ALL_CLASSES_GRADE_OPTIONS}
                 size="sm"
               />
             </div>
@@ -375,7 +357,7 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
                   id={`upload-term-${category}`}
                   value={term}
                   onChange={setTerm}
-                  options={TERM_OPTIONS}
+                  options={UPLOAD_TERM_OPTIONS}
                   size="sm"
                 />
               </div>
@@ -458,11 +440,10 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <div
-                        className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                          isPdf
-                            ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                            : "bg-primary/10 text-primary border-primary/20"
-                        }`}
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${isPdf
+                          ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
+                          : "bg-primary/10 text-primary border-primary/20"
+                          }`}
                       >
                         {isPdf ? (
                           <FileText className="h-5 w-5" />
@@ -484,7 +465,7 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
                             </span>
                           )}
                           <span>{isPdf ? "PDF" : "Image"}</span>
-                          <span>• {formatBytes(doc.fileSize)}</span>
+                          <span>• {formatFileSize(doc.fileSize)}</span>
                         </div>
                         {doc.notes && (
                           <p className="text-[11px] text-muted-foreground truncate">
@@ -537,75 +518,21 @@ export function CoordinatorFileUpload({ category }: CoordinatorFileUploadProps) 
         </div>
       </div>
 
-      {/* Preview Modal */}
-      {previewDoc && (
-        <div
-          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6"
-          onClick={() => setPreviewDoc(null)}
-        >
-          <div
-            className="w-full max-w-4xl max-h-[90vh] rounded-2xl border border-border bg-card text-card-foreground shadow-2xl flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-4 py-3 border-b flex items-center justify-between gap-3 bg-muted/30">
-              <div className="min-w-0">
-                <h3 className="text-sm font-bold text-foreground truncate">
-                  {previewDoc.title}
-                </h3>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {previewDoc.fileName} • {previewDoc.grade}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <a
-                  href={previewDoc.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold hover:bg-muted transition-colors"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Open Tab</span>
-                </a>
-                <a
-                  href={previewDoc.downloadUrl}
-                  download={previewDoc.fileName}
-                  className="inline-flex items-center gap-1 rounded-lg bg-primary text-primary-foreground px-2.5 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Download</span>
-                </a>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPreviewDoc(null)}
-                  className="h-8 w-8 p-0"
-                  aria-label="Close preview"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto bg-muted/20 p-3 sm:p-4 flex items-center justify-center min-h-[60vh]">
-              {previewDoc.mimeType === "application/pdf" ? (
-                <iframe
-                  src={previewDoc.fileUrl}
-                  title={previewDoc.title}
-                  className="w-full h-[70vh] rounded-xl border bg-background"
-                />
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewDoc.fileUrl}
-                  alt={previewDoc.title}
-                  className="max-w-full max-h-[72vh] object-contain rounded-xl border shadow-sm"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <FilePreviewModal
+        file={
+          previewDoc
+            ? {
+              title: previewDoc.title,
+              fileName: previewDoc.fileName,
+              subtitle: `${previewDoc.fileName} • ${previewDoc.grade}`,
+              mimeType: previewDoc.mimeType,
+              fileUrl: previewDoc.fileUrl,
+              downloadUrl: previewDoc.downloadUrl,
+            }
+            : null
+        }
+        onClose={() => setPreviewDoc(null)}
+      />
     </div>
   );
 }

@@ -300,10 +300,16 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await CampusNotification.deleteOne({
+    const deleteFilter: Record<string, unknown> = {
       _id: new mongoose.Types.ObjectId(id),
       schoolId: new mongoose.Types.ObjectId(session.schoolId),
-    });
+    };
+    if (session.role === "coordinator") {
+      deleteFilter.audience = { $ne: "admin" };
+      deleteFilter.category = { $ne: "billing" };
+    }
+
+    await CampusNotification.deleteOne(deleteFilter);
 
     return NextResponse.json({
       success: true,

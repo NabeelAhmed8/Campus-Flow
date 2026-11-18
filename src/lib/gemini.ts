@@ -86,3 +86,51 @@ Only return raw JSON without markdown code fences.`;
   const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
   return JSON.parse(cleaned);
 }
+
+export interface FeedbackPrompt {
+  studentName?: string;
+  subject: string;
+  assessment?: string;
+  obtainedMarks: number;
+  totalMarks: number;
+  examStatus?: "present" | "absent";
+}
+
+export async function generateStudentFeedbackAI(
+  params: FeedbackPrompt
+): Promise<string> {
+  if (!ai || !apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured in your environment. Please add a valid GEMINI_API_KEY to enable AI feedback generation."
+    );
+  }
+
+  const pct =
+    params.examStatus === "absent"
+      ? 0
+      : params.totalMarks > 0
+      ? Math.round((params.obtainedMarks / params.totalMarks) * 100)
+      : 0;
+
+  const prompt =
+    params.examStatus === "absent"
+      ? `Write a concise, professional 2-sentence teacher remark for a parent report card noting that ${
+          params.studentName || "the student"
+        } was absent for the ${params.assessment || "term"} exam in ${
+          params.subject
+        }, encouraging coordination with the teacher to cover missed topics. Return plain text only (no quotes, no markdown).`
+      : `Write a concise, constructive, personalized 2-sentence teacher evaluation remark for a student report card.
+Student: ${params.studentName || "Student"}
+Subject: ${params.subject}
+Assessment: ${params.assessment || "Term Examination"}
+Score: ${params.obtainedMarks}/${params.totalMarks} (${pct}%)
+Tone: encouraging, academic, actionable for both student and parent.
+Return plain text only (no quotation marks, no markdown formatting).`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: prompt,
+  });
+
+  return (response.text || "").replace(/^["']|["']$/g, "").trim();
+}

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
+import { School } from "@/models/School";
 import { ensureAdminSchool } from "@/lib/school";
 import {
   clearSessionCookie,
@@ -191,8 +192,8 @@ export async function requireAuth(
 
     const assignedClasses = Array.isArray(dbUser.assignedClasses)
       ? dbUser.assignedClasses
-          .filter((c) => c && c.grade && c.section)
-          .map((c) => ({ grade: c.grade.trim(), section: c.section.trim() }))
+        .filter((c) => c && c.grade && c.section)
+        .map((c) => ({ grade: c.grade.trim(), section: c.section.trim() }))
       : [];
 
     const liveSession: SessionPayload = {
@@ -200,7 +201,7 @@ export async function requireAuth(
       name: dbUser.name,
       email: dbUser.email,
       role: dbUser.role,
-      institution: dbUser.institution || "St. Jude Collegiate Academy",
+      institution: dbUser.institution || "CampusFlow Institution",
       schoolId,
       schoolCode,
       linkedStudentId: linkedIdsArray[0],
@@ -216,6 +217,41 @@ export async function requireAuth(
           { status: 403 }
         ),
       };
+    }
+
+    // Server-side SaaS subscription lockout enforcement:
+    // Allow auth, subscription, and payment endpoints even when expired so Admins can renew.
+    const reqPathname = new URL(req.url).pathname;
+    const isBillingOrAuthPath =
+      reqPathname.startsWith("/api/auth/") ||
+      reqPathname.startsWith("/api/subscription") ||
+      reqPathname.startsWith("/api/payments/");
+
+    if (
+      !isBillingOrAuthPath &&
+      liveSession.schoolId &&
+      mongoose.Types.ObjectId.isValid(liveSession.schoolId)
+    ) {
+      const schoolDoc = await School.findById(liveSession.schoolId)
+        .select("subscription.graceEndsAt subscription.status")
+        .lean();
+
+      const graceEndsAt = schoolDoc?.subscription?.graceEndsAt;
+      if (
+        graceEndsAt &&
+        Date.now() > new Date(graceEndsAt).getTime()
+      ) {
+        return {
+          response: NextResponse.json(
+            {
+              error:
+                "Your institution's CampusFlow subscription has expired. Please renew your plan to restore workspace access.",
+              code: "SUBSCRIPTION_EXPIRED",
+            },
+            { status: 402 }
+          ),
+        };
+      }
     }
 
     return { session: liveSession };

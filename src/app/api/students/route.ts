@@ -113,7 +113,7 @@ export async function POST(req: Request) {
 
     const trimmedName = name.trim().slice(0, 100);
     const parsedFee =
-      monthlyFee !== undefined && monthlyFee !== "" ? Number(monthlyFee) : 12500;
+      monthlyFee !== undefined && monthlyFee !== "" ? Number(monthlyFee) : 0;
 
     if (!Number.isFinite(parsedFee) || parsedFee <= 0 || parsedFee > 500000) {
       return NextResponse.json(

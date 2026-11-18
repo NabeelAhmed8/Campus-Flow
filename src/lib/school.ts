@@ -40,7 +40,7 @@ export async function createSchoolForAdmin(params: {
   institutionName: string;
   ownerId: mongoose.Types.ObjectId | string;
 }): Promise<{ schoolId: mongoose.Types.ObjectId; schoolCode: string; name: string }> {
-  const cleanName = params.institutionName.trim() || "St. Jude Collegiate Academy";
+  const cleanName = params.institutionName.trim() || "CampusFlow Institution";
   const code = await generateUniqueSchoolCode(cleanName);
 
   const school = await School.create({
@@ -84,7 +84,7 @@ export async function ensureAdminSchool(user: {
   }
 
   const created = await createSchoolForAdmin({
-    institutionName: user.institution || "St. Jude Collegiate Academy",
+    institutionName: user.institution || "CampusFlow Institution",
     ownerId: user._id,
   });
 
