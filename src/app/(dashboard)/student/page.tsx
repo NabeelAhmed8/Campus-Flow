@@ -122,10 +122,10 @@ export default function StudentPage() {
           prev.map((asg) =>
             asg.id === id
               ? {
-                  ...asg,
-                  status: nextStatus,
-                  submittedAt: nextStatus === "submitted" ? new Date().toISOString() : null,
-                }
+                ...asg,
+                status: nextStatus,
+                submittedAt: nextStatus === "submitted" ? new Date().toISOString() : null,
+              }
               : asg
           )
         );
@@ -266,13 +266,12 @@ export default function StudentPage() {
                   {standing.hasRecords ? `${standing.gpa} / 4.0` : "—"}
                 </span>
                 <span
-                  className={`block text-[10px] font-semibold ${
-                    !standing.hasRecords
-                      ? "text-muted-foreground"
-                      : standing.passed
+                  className={`block text-[10px] font-semibold ${!standing.hasRecords
+                    ? "text-muted-foreground"
+                    : standing.passed
                       ? "text-emerald-600"
                       : "text-destructive"
-                  }`}
+                    }`}
                 >
                   {standing.hasRecords
                     ? `Grade ${standing.letterGrade} (${standing.overallPct}%)`

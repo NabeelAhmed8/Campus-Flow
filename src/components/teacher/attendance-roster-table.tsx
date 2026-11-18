@@ -83,11 +83,10 @@ export function AttendanceRosterTable({
                             key={btn.id}
                             type="button"
                             onClick={() => onStatusChange(st._id, btn.id)}
-                            className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
-                              currentStatus === btn.id
-                                ? `${btn.activeCls} text-white font-semibold shadow-xs`
-                                : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-                            }`}
+                            className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${currentStatus === btn.id
+                              ? `${btn.activeCls} text-white font-semibold shadow-xs`
+                              : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+                              }`}
                           >
                             {btn.label}
                           </button>
