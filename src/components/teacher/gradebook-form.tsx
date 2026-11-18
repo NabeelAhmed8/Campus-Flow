@@ -136,9 +136,8 @@ export function GradebookForm({
           <p className="text-xs text-muted-foreground italic py-2">
             {students.length === 0
               ? "No students currently enrolled. Admit students in Admin Hub."
-              : `No students found in ${
-                  gradeClassFilter === "all" ? "all classes" : gradeClassFilter
-                }${gradeSectionFilter !== "all" ? ` - Section ${gradeSectionFilter}` : ""}.`}
+              : `No students found in ${gradeClassFilter === "all" ? "all classes" : gradeClassFilter
+              }${gradeSectionFilter !== "all" ? ` - Section ${gradeSectionFilter}` : ""}.`}
           </p>
         )}
       </div>
@@ -182,11 +181,10 @@ export function GradebookForm({
           <button
             type="button"
             onClick={() => onExamStatusChange("present")}
-            className={`h-8.5 rounded-lg border text-xs font-semibold transition-all ${
-              examStatus === "present"
-                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                : "bg-background text-muted-foreground hover:text-foreground"
-            }`}
+            className={`h-8.5 rounded-lg border text-xs font-semibold transition-all ${examStatus === "present"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+              : "bg-background text-muted-foreground hover:text-foreground"
+              }`}
           >
             ✓ Present in Exam
           </button>
@@ -196,11 +194,10 @@ export function GradebookForm({
               onExamStatusChange("absent");
               onObtainedMarksChange("0");
             }}
-            className={`h-8.5 rounded-lg border text-xs font-semibold transition-all ${
-              examStatus === "absent"
-                ? "bg-destructive text-white border-destructive shadow-xs"
-                : "bg-background text-muted-foreground hover:text-foreground"
-            }`}
+            className={`h-8.5 rounded-lg border text-xs font-semibold transition-all ${examStatus === "absent"
+              ? "bg-destructive text-white border-destructive shadow-xs"
+              : "bg-background text-muted-foreground hover:text-foreground"
+              }`}
           >
             ✕ Absent in Exam (AB)
           </button>
@@ -255,11 +252,10 @@ export function GradebookForm({
             value={examStatus === "absent" ? "0" : obtainedMarks}
             onChange={(e) => onObtainedMarksChange(e.target.value)}
             placeholder={examStatus === "absent" ? "Marked Absent (AB)" : `0 - ${totalMarks}`}
-            className={`w-full h-9 rounded-lg border px-3 text-xs outline-none focus:ring-1 focus:ring-primary ${
-              examStatus === "absent"
-                ? "bg-destructive/5 border-destructive/30 text-destructive cursor-not-allowed"
-                : "bg-background"
-            }`}
+            className={`w-full h-9 rounded-lg border px-3 text-xs outline-none focus:ring-1 focus:ring-primary ${examStatus === "absent"
+              ? "bg-destructive/5 border-destructive/30 text-destructive cursor-not-allowed"
+              : "bg-background"
+              }`}
             required={examStatus === "present"}
           />
         </div>
@@ -267,11 +263,10 @@ export function GradebookForm({
 
       {calculatedPassStatus && (
         <div
-          className={`p-2.5 rounded-lg border flex items-center justify-between text-xs ${
-            calculatedPassStatus === "PASS"
-              ? "bg-emerald-500/10 border-emerald-500/25"
-              : "bg-destructive/10 border-destructive/25"
-          }`}
+          className={`p-2.5 rounded-lg border flex items-center justify-between text-xs ${calculatedPassStatus === "PASS"
+            ? "bg-emerald-500/10 border-emerald-500/25"
+            : "bg-destructive/10 border-destructive/25"
+            }`}
         >
           <span className="text-muted-foreground font-medium">Result Verdict:</span>
           <div className="flex items-center gap-2">
@@ -281,11 +276,10 @@ export function GradebookForm({
                 : `${calculatedPct}% • Grade ${calculatedGrade}`}
             </span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                calculatedPassStatus === "PASS"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-destructive text-white"
-              }`}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${calculatedPassStatus === "PASS"
+                ? "bg-emerald-600 text-white"
+                : "bg-destructive text-white"
+                }`}
             >
               {calculatedPassStatus}
             </span>

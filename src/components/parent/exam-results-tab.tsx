@@ -107,21 +107,19 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
               key={tk}
               type="button"
               onClick={() => setSelectedExamTerm(tk)}
-              className={`text-left rounded-2xl border p-4 transition-all ${
-                isSelected
-                  ? "bg-primary/5 border-primary shadow-xs ring-1 ring-primary/20"
-                  : "bg-card hover:bg-muted/30"
-              }`}
+              className={`text-left rounded-2xl border p-4 transition-all ${isSelected
+                ? "bg-primary/5 border-primary shadow-xs ring-1 ring-primary/20"
+                : "bg-card hover:bg-muted/30"
+                }`}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-foreground">{EXAM_TERM_LABELS[tk]}</span>
                 {stats ? (
                   <span
-                    className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                      stats.passed
-                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                        : "bg-destructive/15 text-destructive"
-                    }`}
+                    className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${stats.passed
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : "bg-destructive/15 text-destructive"
+                      }`}
                   >
                     {stats.passed ? "PASS" : "FAIL"}
                   </span>
@@ -137,9 +135,8 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
                 </span>
                 <span className="text-[11px] text-muted-foreground">
                   {stats
-                    ? `${stats.count} ${stats.count === 1 ? "subject" : "subjects"}${
-                        stats.absentCount > 0 ? ` • ${stats.absentCount} AB` : ""
-                      }`
+                    ? `${stats.count} ${stats.count === 1 ? "subject" : "subjects"}${stats.absentCount > 0 ? ` • ${stats.absentCount} AB` : ""
+                    }`
                     : "Awaiting exam marks"}
                 </span>
               </div>
@@ -169,11 +166,10 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
             {filteredRecs.length > 0 && (
               <div className="flex items-center gap-2">
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    overallVerdict === "PASS"
-                      ? "bg-emerald-600 text-white"
-                      : "bg-destructive text-white"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${overallVerdict === "PASS"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-destructive text-white"
+                    }`}
                 >
                   Result: {overallVerdict}
                 </span>
@@ -194,19 +190,17 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
                   key={td.key}
                   type="button"
                   onClick={() => setSelectedExamTerm(td.key)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 border ${
-                    active
-                      ? "bg-primary text-primary-foreground border-primary shadow-2xs"
-                      : "bg-background text-muted-foreground hover:text-foreground border-border"
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 border ${active
+                    ? "bg-primary text-primary-foreground border-primary shadow-2xs"
+                    : "bg-background text-muted-foreground hover:text-foreground border-border"
+                    }`}
                 >
                   <span>{td.label}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      active
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${active
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     {count}
                   </span>
@@ -265,19 +259,17 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
                   Final Status
                 </div>
                 <div
-                  className={`text-sm font-bold mt-0.5 ${
-                    overallVerdict === "PASS"
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-destructive"
-                  }`}
+                  className={`text-sm font-bold mt-0.5 ${overallVerdict === "PASS"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-destructive"
+                    }`}
                 >
                   {overallVerdict === "PASS"
                     ? "Passed & Cleared"
                     : overallVerdict === "ABSENT"
                       ? "Absent in Examination"
-                      : `Failed (${failedSubjects.length + absentSubjects.length} paper${
-                          failedSubjects.length + absentSubjects.length === 1 ? "" : "s"
-                        })`}
+                      : `Failed (${failedSubjects.length + absentSubjects.length} paper${failedSubjects.length + absentSubjects.length === 1 ? "" : "s"
+                      })`}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {selectedExamTerm === "all"
@@ -300,5 +292,21 @@ export function ParentExamResultsTab({ student }: ParentExamResultsTabProps) {
         />
       </div>
     </div>
+  );
+}
+overallPct = { overallPct }
+overallGrade = { overallGrade }
+overallVerdict = { overallVerdict }
+  />
+      </div >
+    </div >
+  );
+}
+overallPct = { overallPct }
+overallGrade = { overallGrade }
+overallVerdict = { overallVerdict }
+  />
+      </div >
+    </div >
   );
 }

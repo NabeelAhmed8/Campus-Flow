@@ -110,11 +110,10 @@ export function GradebookTab({
     ...EXAM_TERM_OPTIONS.map((opt) => ({
       value: opt.value,
       label: opt.label,
-      badge: `${
-        classSectionFilteredGradeRecords.filter(
-          (r) => (r.term || "first_term") === opt.value
-        ).length
-      }`,
+      badge: `${classSectionFilteredGradeRecords.filter(
+        (r) => (r.term || "first_term") === opt.value
+      ).length
+        }`,
     })),
     {
       value: "all",

@@ -227,10 +227,10 @@ export async function POST(req: Request) {
         typeof feedback === "string" && feedback.trim()
           ? feedback.trim().slice(0, 600)
           : normalizedExamStatus === "absent"
-          ? "Student was absent for this subject examination."
-          : resultStatus === "pass"
-          ? "Good performance in this examination cycle."
-          : "Needs focused improvement to meet the 40% passing standard.",
+            ? "Student was absent for this subject examination."
+            : resultStatus === "pass"
+              ? "Good performance in this examination cycle."
+              : "Needs focused improvement to meet the 40% passing standard.",
       teacherName: session.name || "Faculty Instructor",
       recordedAt: new Date(),
     };
