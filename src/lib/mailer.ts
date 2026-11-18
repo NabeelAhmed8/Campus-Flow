@@ -220,8 +220,7 @@ export async function sendVerificationEmail(
     }
 
     console.info(
-      `[DEV EMAIL VERIFICATION] To: ${params.to} | Code: ${params.code}${
-        previewUrl ? ` | Preview: ${previewUrl}` : ""
+      `[DEV EMAIL VERIFICATION] To: ${params.to} | Code: ${params.code}${previewUrl ? ` | Preview: ${previewUrl}` : ""
       }`
     );
 
@@ -243,11 +242,11 @@ export interface SendSubscriptionEmailParams {
   name: string;
   institution: string;
   eventType:
-    | "renewal_reminder"
-    | "grace_warning"
-    | "payment_confirmed"
-    | "auto_renewed"
-    | "canceled";
+  | "renewal_reminder"
+  | "grace_warning"
+  | "payment_confirmed"
+  | "auto_renewed"
+  | "canceled";
   planName: string;
   daysRemaining?: number;
   periodEndDate?: string;
