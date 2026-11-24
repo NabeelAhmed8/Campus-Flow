@@ -25,9 +25,7 @@ export function SubscriptionManager({
   compact = false,
   onSubscriptionUpdated,
 }: SubscriptionManagerProps) {
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(
-    null
-  );
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [plans, setPlans] = useState<PlanOption[]>([]);
   const [gateway, setGateway] = useState<GatewayStatusInfo>({
     provider: "safepay",
@@ -72,10 +70,6 @@ export function SubscriptionManager({
           );
           window.dispatchEvent(new Event("campusflow_subscription_updated"));
           window.dispatchEvent(new Event("campusflow_notifications_refresh"));
-        } else if (paymentStatus === "pending") {
-          toast.info(
-            "Payment received — awaiting final Safepay webhook confirmation."
-          );
         } else if (paymentStatus === "canceled") {
           toast.warning("Safepay checkout was canceled. No charges were made.");
         } else {
@@ -160,7 +154,7 @@ export function SubscriptionManager({
               Choose a Monthly CampusFlow Plan
             </h3>
             <p className="text-xs text-muted-foreground">
-              Instant activation via Safepay • Cancel anytime • 3-day advance email &amp; dashboard renewal alerts
+              Instant activation via Safepay (JazzCash, Easypaisa, Debit &amp; Credit Cards) • Cancel anytime • 3-day advance renewal alerts
             </p>
           </div>
         )}
@@ -175,8 +169,8 @@ export function SubscriptionManager({
               <div
                 key={plan.id}
                 className={`rounded-2xl border p-5 flex flex-col justify-between space-y-4 transition-all ${plan.popular
-                  ? "border-primary bg-primary/[0.03] shadow-sm ring-1 ring-primary/20"
-                  : "bg-card shadow-2xs"
+                    ? "border-primary bg-primary/[0.03] shadow-sm ring-1 ring-primary/20"
+                    : "bg-card shadow-2xs"
                   }`}
               >
                 <div className="space-y-3">
@@ -196,12 +190,12 @@ export function SubscriptionManager({
                   <div className="pt-1">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-extrabold tracking-tight text-foreground">
-                        PKR {plan.pricePkr.toLocaleString()}
+                        ${plan.priceUsd} USD
                       </span>
                       <span className="text-xs text-muted-foreground">/month</span>
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      ${plan.priceUsd} USD/mo • {plan.studentLimit}
+                      ≈ PKR {plan.pricePkr.toLocaleString()}/mo • {plan.studentLimit}
                     </p>
                   </div>
 
@@ -223,7 +217,7 @@ export function SubscriptionManager({
                 >
                   <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                   {isCurrent
-                    ? "Renew / Extend Plan"
+                    ? "Manage / Renew Plan"
                     : subscription?.isTrial || subscription?.isLocked
                       ? `Subscribe to ${plan.name}`
                       : `Switch to ${plan.name}`}
@@ -239,7 +233,10 @@ export function SubscriptionManager({
       )}
 
       <SafepayCheckoutModal
+        key={checkoutPlan?.id || "safepay-modal"}
         plan={checkoutPlan}
+        allPlans={plans}
+        onSelectPlan={(p) => setCheckoutPlan(p)}
         gateway={gateway}
         onClose={() => setCheckoutPlan(null)}
       />

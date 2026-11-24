@@ -28,7 +28,7 @@ export function LandingPricing({ authState }: LandingPricingProps) {
               Simple, Transparent Monthly Pricing
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Start free for 14 days with full access to all 5 portals. Upgrade seamlessly with Pakistani Bank / Raast, JazzCash, EasyPaisa, or Debit/Credit Card.
+              Start free for 14 days with full access to all 5 portals. Upgrade seamlessly with JazzCash, Easypaisa, or Pakistani &amp; Global Cards via Safepay — with instant activation and zero hidden fees.
             </p>
 
             {/* Currency Switcher */}
@@ -36,22 +36,20 @@ export function LandingPricing({ authState }: LandingPricingProps) {
               <button
                 type="button"
                 onClick={() => setPricingCurrency("PKR")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  pricingCurrency === "PKR"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${pricingCurrency === "PKR"
+                  ? "bg-primary text-primary-foreground shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 PKR (Pakistan)
               </button>
               <button
                 type="button"
                 onClick={() => setPricingCurrency("USD")}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  pricingCurrency === "USD"
-                    ? "bg-primary text-primary-foreground shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${pricingCurrency === "USD"
+                  ? "bg-primary text-primary-foreground shadow-2xs"
+                  : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 USD (Global)
               </button>
@@ -72,11 +70,10 @@ export function LandingPricing({ authState }: LandingPricingProps) {
               return (
                 <div
                   key={plan.id}
-                  className={`rounded-2xl border p-6 sm:p-7 flex flex-col justify-between space-y-6 transition-all ${
-                    plan.popular
-                      ? "border-primary bg-primary/[0.03] shadow-md ring-1 ring-primary/20"
-                      : "bg-card shadow-xs hover:shadow-md"
-                  }`}
+                  className={`rounded-2xl border p-6 sm:p-7 flex flex-col justify-between space-y-6 transition-all ${plan.popular
+                    ? "border-primary bg-primary/[0.03] shadow-md ring-1 ring-primary/20"
+                    : "bg-card shadow-xs hover:shadow-md"
+                    }`}
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between gap-2">
@@ -186,7 +183,6 @@ export function LandingPricing({ authState }: LandingPricingProps) {
           <div className="flex items-center gap-2 font-semibold text-foreground">
             <GraduationCap className="h-4 w-4" />
             <span>CampusFlow</span>
-            <span className="font-normal text-muted-foreground">• Next.js 16 Educational SaaS</span>
           </div>
           <div>Built for modern schools, academies, and educational institutions.</div>
         </div>

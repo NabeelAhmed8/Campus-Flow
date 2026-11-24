@@ -188,7 +188,7 @@ export function GradebookTab({
       const data = await res.json();
       if (res.ok && data.success && data.feedback) {
         patchForm({ feedback: data.feedback });
-        toast.success("Personalized Gemini AI feedback generated!");
+        toast.success("Personalized AI feedback generated!");
       } else {
         toast.error(data.error || "Unable to generate AI feedback.");
       }

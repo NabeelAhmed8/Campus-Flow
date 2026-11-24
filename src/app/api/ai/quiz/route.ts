@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       ? Math.min(10, Math.max(1, Math.round(rawCount)))
       : 3;
 
-    const questions = await generateQuizAI({
+    const { questions, modelUsed } = await generateQuizAI({
       topic: topic.trim().slice(0, 200),
       grade:
         typeof grade === "string" && grade.trim()
@@ -31,12 +31,13 @@ export async function POST(req: Request) {
       count: safeCount,
     });
 
-    return NextResponse.json({ success: true, questions });
+    return NextResponse.json({ success: true, questions, model: modelUsed });
   } catch (error) {
     console.error("[AI_QUIZ_ERROR]", error);
-    return NextResponse.json(
-      { error: "Failed to generate assessment quiz. Please try again." },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Failed to generate assessment quiz. Please try again.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

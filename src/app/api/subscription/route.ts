@@ -7,17 +7,12 @@ import {
   evaluateAndSyncSchoolSubscription,
   SUBSCRIPTION_PLANS,
 } from "@/lib/subscription";
+import { formatDateShort } from "@/lib/subscription-fulfillment";
 import { createCampusNotification } from "@/lib/notifications";
 import { sendSubscriptionEmail } from "@/lib/mailer";
-import { getSafepayConfig } from "@/lib/safepay";
-
-function formatDateShort(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import {
+  getSafepayConfig,
+} from "@/lib/safepay";
 
 export async function GET(req: Request) {
   const auth = await requireSchoolAuth(
@@ -72,15 +67,15 @@ export async function GET(req: Request) {
       });
     }
 
-    const sfCfg = getSafepayConfig();
+    const spCfg = getSafepayConfig();
     return NextResponse.json({
       success: true,
       subscription: summary,
       plans: SUBSCRIPTION_PLANS,
       gateway: {
         provider: "safepay",
-        configured: sfCfg.configured,
-        environment: sfCfg.environment,
+        configured: spCfg.configured,
+        environment: spCfg.environment,
         webhookPath: "/api/webhooks/payment",
       },
     });
@@ -98,7 +93,7 @@ export async function POST(req: Request) {
   if (auth.response) return auth.response;
 
   // Direct unverified plan activation is disabled for security.
-  // All paid subscriptions must be fulfilled through Safepay Hosted Checkout + signed verification.
+  // All paid subscriptions must be fulfilled through Safepay Hosted Checkout (JazzCash / Easypaisa / Card).
   return NextResponse.json(
     {
       error:
@@ -137,13 +132,14 @@ export async function PATCH(req: Request) {
     if (action === "toggle_auto_renew") {
       const nextAutoRenew = Boolean(autoRenew);
       sub.autoRenew = nextAutoRenew;
-      if (nextAutoRenew && sub.cancelAtPeriodEnd) {
-        sub.cancelAtPeriodEnd = false;
-        sub.canceledAt = null;
+      sub.cancelAtPeriodEnd = !nextAutoRenew;
+      sub.canceledAt = nextAutoRenew ? null : new Date();
+      if (sub.planId !== "trial") {
+        sub.status = nextAutoRenew ? "active" : "canceled";
       }
       message = nextAutoRenew
-        ? "Auto-Renew enabled. Your monthly plan will renew automatically."
-        : "Auto-Renew turned off. You will receive a reminder 3 days before expiry.";
+        ? "Auto-Renew preference enabled. You will receive renewal alerts before cycle end."
+        : "Auto-Renew preference turned off. Your workspace access remains active until the end of the period.";
     } else if (action === "cancel") {
       sub.cancelAtPeriodEnd = true;
       sub.autoRenew = false;
@@ -183,7 +179,7 @@ export async function PATCH(req: Request) {
       if (sub.planId !== "trial" && sub.status === "canceled") {
         sub.status = "active";
       }
-      message = "Subscription resumed and Auto-Renew re-enabled.";
+      message = "Subscription resumed and renewal alerts re-enabled.";
     } else {
       return NextResponse.json(
         { error: "Unsupported subscription action." },

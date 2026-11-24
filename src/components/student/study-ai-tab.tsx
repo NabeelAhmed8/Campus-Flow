@@ -37,7 +37,7 @@ export function StudentStudyAiTab({ grade }: StudentStudyAiTabProps) {
       const data = await res.json();
       if (data.success && Array.isArray(data.questions)) {
         setStudyQuestions(data.questions);
-        toast.success("AI Practice Flashcards created via Gemini!");
+        toast.success("AI Practice Flashcards created!");
       } else {
         toast.error(data.error || "Failed to generate study practice questions");
       }
@@ -53,7 +53,7 @@ export function StudentStudyAiTab({ grade }: StudentStudyAiTabProps) {
       <div className="lg:col-span-5 rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
           <Sparkles className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-base">Gemini 2.5 AI Study Coach</h3>
+          <h3 className="font-semibold text-base">Gemini 3 AI Study Coach</h3>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
           Type any topic from your coursework to generate customized formative flashcards and practice test questions.
@@ -81,7 +81,7 @@ export function StudentStudyAiTab({ grade }: StudentStudyAiTabProps) {
             {generatingQuiz ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Flashcards via Gemini...
+                Generating Flashcards...
               </>
             ) : (
               <>
@@ -130,7 +130,7 @@ export function StudentStudyAiTab({ grade }: StudentStudyAiTabProps) {
         {generatingQuiz && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <Loader2 className="h-8 w-8 text-primary animate-spin mb-3" />
-            <p className="text-sm font-semibold">Gemini 2.5 Flash is creating your study test...</p>
+            <p className="text-sm font-semibold">Crafting your practice test...</p>
             <p className="text-xs text-muted-foreground mt-1">
               Curating questions tailored to {grade || "your grade"}.
             </p>

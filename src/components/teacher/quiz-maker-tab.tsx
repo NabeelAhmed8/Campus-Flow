@@ -41,7 +41,7 @@ export function QuizMakerTab({ grade }: QuizMakerTabProps) {
       const data = await res.json();
       if (data.success && Array.isArray(data.questions)) {
         setQuizResult(data.questions);
-        toast.success("Formative assessment quiz created via Gemini AI!");
+        toast.success("Formative assessment quiz created!");
       } else {
         toast.error(data.error || "Failed to create assessment quiz");
       }
@@ -61,7 +61,7 @@ export function QuizMakerTab({ grade }: QuizMakerTabProps) {
             <h2 className="font-semibold text-base">Instant Formative Quiz Maker</h2>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Draft a 3-question formative assessment via Gemini AI for your exit tickets, flashcards, or pop quizzes.
+            Draft a 3-question AI formative assessment for your exit tickets, flashcards, or pop quizzes.
           </p>
 
           <div className="space-y-3 text-xs">
@@ -153,7 +153,7 @@ export function QuizMakerTab({ grade }: QuizMakerTabProps) {
           {generatingQuiz && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <Loader2 className="h-10 w-10 text-primary animate-spin mb-3" />
-              <p className="text-sm font-semibold">Gemini AI is crafting your assessment...</p>
+              <p className="text-sm font-semibold">Crafting your assessment...</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Formulating multiple-choice questions and answer keys.
               </p>

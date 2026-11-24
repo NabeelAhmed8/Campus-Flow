@@ -5,6 +5,7 @@ export type PaymentOrderStatus = "pending" | "paid" | "failed" | "canceled";
 export interface IPaymentOrder extends Document {
   orderId: string;
   tracker: string;
+  checkoutId: string;
   schoolId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   planId: "starter" | "growth" | "enterprise";
@@ -16,6 +17,8 @@ export interface IPaymentOrder extends Document {
   environment: "sandbox" | "production";
   status: PaymentOrderStatus;
   safepayReference: string;
+  externalSubscriptionId: string;
+  externalOrderId: string;
   webhookEventId: string;
   paidAt?: Date | null;
   createdAt: Date;
@@ -32,6 +35,12 @@ const PaymentOrderSchema = new Schema<IPaymentOrder>(
       index: true,
     },
     tracker: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+    checkoutId: {
       type: String,
       default: "",
       trim: true,
@@ -65,7 +74,7 @@ const PaymentOrderSchema = new Schema<IPaymentOrder>(
     environment: {
       type: String,
       enum: ["sandbox", "production"],
-      default: "sandbox",
+      default: "production",
     },
     status: {
       type: String,
@@ -74,11 +83,25 @@ const PaymentOrderSchema = new Schema<IPaymentOrder>(
       index: true,
     },
     safepayReference: { type: String, default: "", trim: true },
+    externalSubscriptionId: { type: String, default: "", trim: true, index: true },
+    externalOrderId: { type: String, default: "", trim: true },
     webhookEventId: { type: String, default: "", trim: true },
     paidAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
+
+const existingPaymentOrder = mongoose.models.PaymentOrder;
+const existingGateway = existingPaymentOrder?.schema.path("gateway") as
+  | { options?: { enum?: string[] } }
+  | undefined;
+if (
+  existingPaymentOrder &&
+  (!existingPaymentOrder.schema.path("checkoutId") ||
+    !existingGateway?.options?.enum?.includes("safepay"))
+) {
+  mongoose.deleteModel("PaymentOrder");
+}
 
 export const PaymentOrder: Model<IPaymentOrder> =
   mongoose.models.PaymentOrder ||

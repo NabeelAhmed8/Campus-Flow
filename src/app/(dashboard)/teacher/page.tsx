@@ -107,7 +107,7 @@ export default function TeacherPage() {
               AI Lesson Planner & Pedagogy Suite
             </h1>
             <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">
-              Gemini 2.5 Flash
+              AI Pedagogy Suite
             </span>
           </div>
           <p className="text-sm text-muted-foreground">

@@ -6,7 +6,7 @@ import {
   resolveAppOrigin,
   verifySafepayCallbackSignature,
 } from "@/lib/safepay";
-import { fulfillPaidSubscriptionOrder } from "@/lib/subscription";
+import { fulfillPaidSubscriptionOrder } from "@/lib/subscription-fulfillment";
 
 async function handleCallback(
   req: Request,
@@ -39,11 +39,10 @@ async function handleCallback(
 
     const cfg = getSafepayConfig();
 
-    // Always require a valid cryptographic Safepay callback signature before activating
     if (!cfg.v1Secret || !tracker || !verifySafepayCallbackSignature(tracker, sig)) {
       console.warn(
-        "[SAFEPAY_CALLBACK] Missing or invalid Safepay callback signature; refusing unverified activation.",
-        { hasSecret: Boolean(cfg.v1Secret), hasTracker: Boolean(tracker), hasSig: Boolean(sig), orderId }
+        "[SAFEPAY_CALLBACK] Invalid or unverified Safepay signature; refusing activation.",
+        { orderId, tracker, hasSig: Boolean(sig) }
       );
       return NextResponse.redirect(
         `${origin}/admin?tab=subscription&payment=pending`,
@@ -98,7 +97,7 @@ export async function POST(req: Request) {
   const { searchParams } = new URL(req.url);
   const contentType = req.headers.get("content-type") || "";
 
-  let bodyFields: Record<string, string> = {};
+  const bodyFields: Record<string, string> = {};
   try {
     if (contentType.includes("application/json")) {
       const json = await req.json();
@@ -114,7 +113,7 @@ export async function POST(req: Request) {
       });
     }
   } catch {
-    // Fall back to query parameters only
+    // Fall back to query params
   }
 
   return handleCallback(req, {

@@ -19,6 +19,7 @@ export interface IBillingHistoryItem {
   paidAt: Date;
   periodStart: Date;
   periodEnd: Date;
+  invoiceUrl?: string;
 }
 
 export interface ISchoolSubscription {
@@ -35,6 +36,10 @@ export interface ISchoolSubscription {
   autoRenew: boolean;
   cancelAtPeriodEnd: boolean;
   canceledAt?: Date | null;
+  externalSubscriptionId?: string;
+  externalCustomerId?: string;
+  customerPortalUrl?: string;
+  updatePaymentMethodUrl?: string;
   paymentMethod?: {
     type: "card" | "bank" | "wallet";
     brand: string;
@@ -81,6 +86,7 @@ const BillingHistorySchema = new Schema<IBillingHistoryItem>(
     paidAt: { type: Date, required: true },
     periodStart: { type: Date, required: true },
     periodEnd: { type: Date, required: true },
+    invoiceUrl: { type: String, default: "" },
   },
   { _id: false }
 );
@@ -108,6 +114,10 @@ const SubscriptionSchema = new Schema<ISchoolSubscription>(
     autoRenew: { type: Boolean, default: true },
     cancelAtPeriodEnd: { type: Boolean, default: false },
     canceledAt: { type: Date, default: null },
+    externalSubscriptionId: { type: String, default: "" },
+    externalCustomerId: { type: String, default: "" },
+    customerPortalUrl: { type: String, default: "" },
+    updatePaymentMethodUrl: { type: String, default: "" },
     paymentMethod: {
       type: {
         type: String,
@@ -156,10 +166,14 @@ const SchoolSchema = new Schema<ISchool>(
 
 // Guard against stale Mongoose schema cache during Next.js dev HMR
 const existingSchoolModel = mongoose.models.School;
+const existingSubSchema = existingSchoolModel?.schema.path("subscription") as
+  | { schema?: { path: (field: string) => unknown } }
+  | undefined;
 if (
   existingSchoolModel &&
   (!existingSchoolModel.schema.path("subscription") ||
-    !existingSchoolModel.schema.path("bankAccounts"))
+    !existingSchoolModel.schema.path("bankAccounts") ||
+    !existingSubSchema?.schema?.path("externalSubscriptionId"))
 ) {
   mongoose.deleteModel("School");
 }

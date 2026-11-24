@@ -35,12 +35,17 @@ export async function POST(req: Request) {
           : "General",
     });
 
-    return NextResponse.json({ success: true, plan: result });
+    return NextResponse.json({
+      success: true,
+      plan: result,
+      model: result.modelUsed,
+    });
   } catch (error) {
     console.error("[AI_LESSON_PLAN_ERROR]", error);
-    return NextResponse.json(
-      { error: "Failed to generate lesson plan. Please try again." },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Failed to generate lesson plan. Please try again.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

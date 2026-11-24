@@ -27,6 +27,7 @@ export interface BillingInvoiceRecord {
   paidAt: string;
   periodStart: string;
   periodEnd: string;
+  invoiceUrl?: string;
 }
 
 export interface SubscriptionData {

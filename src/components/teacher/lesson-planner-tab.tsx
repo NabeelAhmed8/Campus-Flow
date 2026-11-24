@@ -205,7 +205,7 @@ export function LessonPlannerTab({ grade, onGradeChange }: LessonPlannerTabProps
           {loading && (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <Loader2 className="h-10 w-10 text-primary animate-spin mb-3" />
-              <p className="text-sm font-semibold">Gemini AI is crafting your lesson plan...</p>
+              <p className="text-sm font-semibold">Crafting your assessment...</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Aligning objectives, time allocation, and assessment criteria.
               </p>

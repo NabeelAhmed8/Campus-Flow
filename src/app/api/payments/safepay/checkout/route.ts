@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const auth = await requireSchoolAuth(req, ["admin"]);
   if (auth.response) return auth.response;
 
-  const { session } = auth;
+  const { session, schoolObjId } = auth;
 
   const cfg = getSafepayConfig();
   if (!cfg.configured) {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       {
         configured: false,
         error:
-          "Safepay merchant keys are not configured yet. Add SAFEPAY_API_KEY, SAFEPAY_V1_SECRET, and SAFEPAY_WEBHOOK_SECRET in .env.local to accept real PKR payments.",
+          "Safepay gateway keys are not configured yet. Add SAFEPAY_API_KEY, SAFEPAY_V1_SECRET, and SAFEPAY_WEBHOOK_SECRET in .env.local to enable JazzCash, Easypaisa, and Card payments.",
       },
       { status: 503 }
     );
@@ -37,38 +37,37 @@ export async function POST(req: Request) {
     const plan = getPlanById(String(planId || ""));
     if (!plan) {
       return NextResponse.json(
-        { error: "Please select a valid subscription plan." },
+        { error: "Please select a valid monthly subscription plan." },
         { status: 400 }
       );
     }
 
-    const now = new Date();
-    const randomSuffix = crypto.randomBytes(3).toString("hex").toUpperCase();
-    const orderId = `CF-${now.getFullYear()}${String(
-      now.getMonth() + 1
-    ).padStart(2, "0")}${String(now.getDate()).padStart(
-      2,
-      "0"
-    )}-${randomSuffix}`;
+    const orderId = `CF-SP-${Date.now().toString(36).toUpperCase()}-${crypto
+      .randomBytes(2)
+      .toString("hex")
+      .toUpperCase()}`;
 
     const origin = resolveAppOrigin(req);
-    // Keep redirectUrl clean (no query params) because Safepay appends ?tracker=...&sig=...&order_id=...
-    const redirectUrl = `${origin}/api/payments/safepay/callback`;
-    const cancelUrl = `${origin}/api/payments/safepay/callback?cancel=1&order_id=${encodeURIComponent(
+    const redirectUrl = `${origin}/api/payments/safepay/callback?order=${encodeURIComponent(
+      orderId
+    )}`;
+    const cancelUrl = `${origin}/admin?tab=subscription&payment=canceled&order=${encodeURIComponent(
       orderId
     )}`;
 
-    const sfSession = await createSafepayOrderSession({
-      amountPkr: plan.pricePkr,
-      orderId,
-      redirectUrl,
-      cancelUrl,
-    });
+    const { tracker, checkoutUrl, environment } =
+      await createSafepayOrderSession({
+        amountPkr: plan.pricePkr,
+        orderId,
+        redirectUrl,
+        cancelUrl,
+      });
 
     await PaymentOrder.create({
       orderId,
-      tracker: sfSession.tracker,
-      schoolId: new mongoose.Types.ObjectId(session.schoolId),
+      tracker,
+      checkoutId: tracker,
+      schoolId: schoolObjId,
       userId: new mongoose.Types.ObjectId(session.id),
       planId: plan.id,
       planName: plan.name,
@@ -76,28 +75,23 @@ export async function POST(req: Request) {
       amountUsd: plan.priceUsd,
       autoRenew: autoRenew !== false,
       gateway: "safepay",
-      environment: sfSession.environment,
+      environment,
       status: "pending",
     });
 
     return NextResponse.json({
       success: true,
-      configured: true,
-      environment: sfSession.environment,
       orderId,
-      tracker: sfSession.tracker,
-      checkoutUrl: sfSession.checkoutUrl,
+      tracker,
+      checkoutUrl,
+      environment,
     });
   } catch (error) {
     console.error("[SAFEPAY_CHECKOUT_ERROR]", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to initialize Safepay payment session.",
-      },
-      { status: 502 }
-    );
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Unable to initialize Safepay checkout session.";
+    return NextResponse.json({ error: message }, { status: 502 });
   }
 }

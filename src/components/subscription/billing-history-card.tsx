@@ -1,6 +1,7 @@
 "use client";
 
-import { ReceiptText } from "lucide-react";
+import { ExternalLink, ReceiptText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatReadableDate } from "@/lib/format";
 import { BillingInvoiceRecord } from "./types";
 
@@ -13,7 +14,7 @@ export function BillingHistoryCard({ history }: BillingHistoryCardProps) {
     <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-3">
       <h3 className="text-sm font-bold flex items-center gap-2 pb-2 border-b text-foreground">
         <ReceiptText className="h-4 w-4 text-primary" />
-        Subscription Billing &amp; Invoice History ({history.length})
+        Subscription Billing &amp; Tax Invoice History ({history.length})
       </h3>
 
       {history.length === 0 ? (
@@ -46,13 +47,31 @@ export function BillingHistoryCard({ history }: BillingHistoryCardProps) {
                 </p>
               </div>
 
-              <div className="text-left sm:text-right shrink-0">
-                <p className="font-bold text-foreground">
-                  PKR {inv.amountPkr.toLocaleString()}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Paid {formatReadableDate(inv.paidAt)}
-                </p>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-left sm:text-right">
+                  <p className="font-bold text-foreground">
+                    ${inv.amountUsd} USD{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (≈ PKR {inv.amountPkr.toLocaleString()})
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Paid {formatReadableDate(inv.paidAt)}
+                  </p>
+                </div>
+
+                {inv.invoiceUrl && (
+                  <Button variant="outline" size="xs" className="h-7 text-[11px]" asChild>
+                    <a
+                      href={inv.invoiceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Tax Invoice
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
           ))}

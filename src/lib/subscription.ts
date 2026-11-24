@@ -69,6 +69,7 @@ export interface SubscriptionSummaryDTO {
     paidAt: string;
     periodStart: string;
     periodEnd: string;
+    invoiceUrl?: string;
   }>;
 }
 
@@ -262,6 +263,7 @@ export async function evaluateAndSyncSchoolSubscription(
       paidAt: new Date(h.paidAt).toISOString(),
       periodStart: new Date(h.periodStart).toISOString(),
       periodEnd: new Date(h.periodEnd).toISOString(),
+      invoiceUrl: h.invoiceUrl || "",
     })),
   };
 }

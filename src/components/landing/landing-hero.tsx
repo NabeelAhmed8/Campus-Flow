@@ -11,8 +11,8 @@ interface LandingHeroProps {
 
 const HERO_METRICS = [
   { value: "5 Portals", label: "Role-Isolated Workspaces" },
-  { value: "Gemini 2.5", label: "Live AI Pedagogy & Study" },
-  { value: "PKR & USD", label: "Local Bank & Safepay Ready" },
+  { value: "AI Lesson", label: "Live AI Pedagogy & Study" },
+  { value: "PKR & USD", label: "Global & Pakistan Cards Ready" },
   { value: "14-Day Free", label: "Full-Access Trial" },
 ];
 

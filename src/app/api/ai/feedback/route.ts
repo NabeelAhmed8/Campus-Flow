@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const total = Number(totalMarks) > 0 ? Number(totalMarks) : 100;
     const obtained = examStatus === "absent" ? 0 : Math.max(0, Number(obtainedMarks) || 0);
 
-    const feedback = await generateStudentFeedbackAI({
+    const { feedback, modelUsed } = await generateStudentFeedbackAI({
       studentName: typeof studentName === "string" ? studentName.trim().slice(0, 80) : undefined,
       subject: subject.trim().slice(0, 80),
       assessment: typeof assessment === "string" ? assessment.trim().slice(0, 100) : undefined,
@@ -26,12 +26,13 @@ export async function POST(req: Request) {
       examStatus: examStatus === "absent" ? "absent" : "present",
     });
 
-    return NextResponse.json({ success: true, feedback });
+    return NextResponse.json({ success: true, feedback, model: modelUsed });
   } catch (error) {
     console.error("[AI_FEEDBACK_ERROR]", error);
-    return NextResponse.json(
-      { error: "Failed to generate AI feedback. Please try again." },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Failed to generate AI feedback. Please try again.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -12,14 +12,16 @@ export interface SafepayConfig {
   checkoutBaseUrl: string;
 }
 
-function isPlaceholderSecret(val: string): boolean {
-  const lower = val.trim().toLowerCase();
+export function isPlaceholderSecret(val: string | undefined): boolean {
+  const lower = (val || "").trim().toLowerCase();
   return (
     !lower ||
     lower.includes("your_safepay") ||
     lower.includes("your_production") ||
     lower.includes("sec_xxxx") ||
-    lower.includes("change_me")
+    lower.includes("change_me") ||
+    lower.startsWith("your_") ||
+    lower.includes("placeholder")
   );
 }
 
@@ -59,14 +61,24 @@ export function getSafepayConfig(): SafepayConfig {
 }
 
 export function resolveAppOrigin(req: Request): string {
-  const configuredUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    process.env.NEXTAUTH_URL?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, "");
+  const configuredUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    ""
+  )
+    .trim()
+    .replace(/\/+$/, "");
+
+  if (configuredUrl && !configuredUrl.includes("your-domain.com")) {
+    return configuredUrl;
   }
-  const url = new URL(req.url);
-  return `${url.protocol}//${url.host}`;
+
+  const proto = req.headers.get("x-forwarded-proto") || "http";
+  const host =
+    req.headers.get("x-forwarded-host") ||
+    req.headers.get("host") ||
+    "localhost:3000";
+  return `${proto}://${host}`;
 }
 
 export async function createSafepayOrderSession(params: {
@@ -97,16 +109,16 @@ export async function createSafepayOrderSession(params: {
   });
 
   const initData = await initRes.json().catch(() => null);
-  const tracker: string =
-    initData?.data?.token || initData?.token || "";
+  const tracker: string = initData?.data?.token || initData?.token || "";
 
   if (!initRes.ok || !tracker) {
     console.error("[SAFEPAY_INIT_ERROR]", initRes.status, initData);
-    throw new Error(
+    const message =
       initData?.status?.errors?.[0] ||
-        initData?.message ||
-        "Safepay could not initialize the checkout session. Please verify your SAFEPAY_API_KEY and SAFEPAY_ENV."
-    );
+      initData?.message ||
+      initData?.error ||
+      `Safepay rejected request (${initRes.status}). Please check your SAFEPAY_API_KEY in .env.local.`;
+    throw new Error(message);
   }
 
   const checkoutParams = new URLSearchParams({
@@ -129,11 +141,7 @@ export async function createSafepayOrderSession(params: {
 function timingSafeHexMatch(expectedHex: string, receivedSig: string): boolean {
   const cleanReceived = receivedSig.trim().replace(/^sha256=/i, "").toLowerCase();
   const cleanExpected = expectedHex.trim().toLowerCase();
-  if (
-    !cleanReceived ||
-    !cleanExpected ||
-    cleanReceived.length !== cleanExpected.length
-  ) {
+  if (!cleanReceived || !cleanExpected || cleanReceived.length !== cleanExpected.length) {
     return false;
   }
   try {
@@ -147,8 +155,7 @@ function timingSafeHexMatch(expectedHex: string, receivedSig: string): boolean {
 }
 
 /**
- * Verifies Safepay webhook `X-SFPY-SIGNATURE` using HMAC-SHA256.
- * Supports both timestamped (`timestamp.rawBody`) and raw-body webhook schemes.
+ * Verifies Safepay webhook signature using HMAC-SHA256.
  */
 export function verifySafepayWebhookSignature(params: {
   rawBody: string;
@@ -163,7 +170,6 @@ export function verifySafepayWebhookSignature(params: {
 
   const candidates: string[] = [];
 
-  // Format 1: Modern Safepay timestamped payload (`X-SFPY-TIMESTAMP + "." + rawBody`)
   if (params.timestampHeader) {
     candidates.push(
       crypto
@@ -173,12 +179,10 @@ export function verifySafepayWebhookSignature(params: {
     );
   }
 
-  // Format 2: Standard Safepay raw JSON body HMAC-SHA256
   candidates.push(
     crypto.createHmac("sha256", secret).update(params.rawBody).digest("hex")
   );
 
-  // Format 3: Safepay v1 JSON `data` object stringified HMAC-SHA256 (used by Safepay Node SDK)
   try {
     const parsed = JSON.parse(params.rawBody);
     if (parsed && typeof parsed.data === "object" && parsed.data !== null) {
@@ -199,17 +203,14 @@ export function verifySafepayWebhookSignature(params: {
 }
 
 /**
- * Verifies Safepay checkout redirect return callback signature (`sig = HMAC-SHA256(V1_SECRET, tracker)`).
+ * Verifies Safepay checkout redirect return callback signature.
  */
 export function verifySafepayCallbackSignature(
   tracker: string,
   sig: string | null
 ): boolean {
   const cfg = getSafepayConfig();
-  if (!cfg.v1Secret) {
-    return false;
-  }
-  if (!tracker || !sig) {
+  if (!cfg.v1Secret || !tracker || !sig) {
     return false;
   }
   const expected = crypto

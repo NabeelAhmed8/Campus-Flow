@@ -42,6 +42,7 @@ export async function resolveSchoolAdminContact(school: ISchool) {
 /**
  * Idempotently fulfills a verified Safepay payment order (called by both the
  * signed Safepay webhook `/api/webhooks/payment` and the verified redirect callback).
+ * Supports JazzCash, Easypaisa, and Pakistani/Global Debit & Credit Cards.
  */
 export async function fulfillPaidSubscriptionOrder(params: {
   orderId?: string;
@@ -86,12 +87,12 @@ export async function fulfillPaidSubscriptionOrder(params: {
       $set: {
         status: "paid",
         paidAt: now,
-        ...(params.safepayReference
-          ? { safepayReference: params.safepayReference.slice(0, 120) }
-          : {}),
-        ...(params.webhookEventId
-          ? { webhookEventId: params.webhookEventId.slice(0, 120) }
-          : {}),
+        ...(params.safepayReference && {
+          safepayReference: params.safepayReference.slice(0, 120),
+        }),
+        ...(params.webhookEventId && {
+          webhookEventId: params.webhookEventId.slice(0, 120),
+        }),
       },
     },
     { new: true }
@@ -128,9 +129,8 @@ export async function fulfillPaidSubscriptionOrder(params: {
   )
     .slice(-6)
     .toUpperCase();
-  const paymentLabel = `Safepay (${
-    claimed.environment === "production" ? "Live" : "Sandbox"
-  } • ${refTail})`;
+
+  const paymentLabel = `Safepay • JazzCash / Easypaisa / Card (${refTail})`;
 
   const sub = school.subscription;
   sub.planId = claimed.planId;
@@ -145,7 +145,7 @@ export async function fulfillPaidSubscriptionOrder(params: {
   sub.cancelAtPeriodEnd = false;
   sub.canceledAt = null;
   sub.paymentMethod = {
-    type: "card",
+    type: "wallet",
     brand: "Safepay",
     last4: refTail.slice(-4),
     label: paymentLabel,
@@ -176,7 +176,7 @@ export async function fulfillPaidSubscriptionOrder(params: {
     schoolId: school._id.toString(),
     category: "billing",
     title: `Safepay Payment Verified — ${sub.planName}`,
-    message: `Your payment (${amountLabel}) was verified via Safepay. Your 30-day cycle is active through ${endFormatted}. Invoice: ${claimed.orderId}.`,
+    message: `Your payment (${amountLabel}) was verified via Safepay (JazzCash / Easypaisa / Card). 30-day cycle active through ${endFormatted}. Invoice: ${claimed.orderId}.`,
     audience: "admin",
     grade: "All Classes",
     priority: "normal",

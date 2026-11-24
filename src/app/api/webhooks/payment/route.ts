@@ -1,23 +1,16 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { PaymentOrder } from "@/models/PaymentOrder";
 import {
   getSafepayConfig,
   verifySafepayWebhookSignature,
 } from "@/lib/safepay";
-import { fulfillPaidSubscriptionOrder } from "@/lib/subscription";
+import { fulfillPaidSubscriptionOrder } from "@/lib/subscription-fulfillment";
 
-/**
- * Signed Safepay Webhook Endpoint
- * Configure this URL in your Safepay Merchant Dashboard -> Developers -> Webhooks:
- *   https://your-domain.com/api/webhooks/payment
- */
 export async function POST(req: Request) {
-  const cfg = getSafepayConfig();
-  if (!cfg.webhookSecret) {
-    console.error("[SAFEPAY_WEBHOOK] SAFEPAY_WEBHOOK_SECRET is not configured.");
+  const sfpyCfg = getSafepayConfig();
+  if (!sfpyCfg.webhookSecret) {
     return NextResponse.json(
-      { error: "Webhook secret is not configured." },
+      { error: "Safepay webhook secret is not configured on this server." },
       { status: 503 }
     );
   }
@@ -31,133 +24,52 @@ export async function POST(req: Request) {
 
   const signatureHeader =
     req.headers.get("x-sfpy-signature") ||
-    req.headers.get("X-SFPY-SIGNATURE");
-  const timestampHeader =
-    req.headers.get("x-sfpy-timestamp") ||
-    req.headers.get("X-SFPY-TIMESTAMP");
-  const eventIdHeader =
-    req.headers.get("x-sfpy-event-id") ||
-    req.headers.get("X-SFPY-EVENT-ID") ||
-    "";
-  const eventTypeHeader =
-    req.headers.get("x-sfpy-event-type") ||
-    req.headers.get("X-SFPY-EVENT-TYPE") ||
-    "";
+    req.headers.get("x-safepay-signature") ||
+    req.headers.get("x-signature");
 
-  const isAuthentic = verifySafepayWebhookSignature({
-    rawBody,
-    signatureHeader,
-    timestampHeader,
-  });
+  const timestampHeader = req.headers.get("x-sfpy-timestamp");
 
-  if (!isAuthentic) {
-    console.warn("[SAFEPAY_WEBHOOK] Rejected invalid X-SFPY-SIGNATURE.");
+  if (!verifySafepayWebhookSignature({ rawBody, signatureHeader, timestampHeader })) {
     return NextResponse.json(
-      { error: "Invalid webhook signature." },
+      { error: "Invalid Safepay webhook signature." },
       { status: 401 }
     );
   }
 
-  interface SafepayNotificationNode {
-    tracker?: string;
-    token?: string;
-    order_id?: string;
-    reference?: string;
-    state?: string;
-    metadata?: { order_id?: string };
-    notification?: SafepayNotificationNode;
-  }
-
-  interface SafepayWebhookPayload {
-    type?: string;
-    event?: string;
-    data?: SafepayNotificationNode;
-    notification?: SafepayNotificationNode;
-    tracker?: string;
-    token?: string;
-    order_id?: string;
-    reference?: string;
-    state?: string;
-    metadata?: { order_id?: string };
-  }
-
-  let payload: SafepayWebhookPayload;
+  let parsed: Record<string, unknown> = {};
   try {
-    payload = JSON.parse(rawBody) as SafepayWebhookPayload;
+    parsed = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "Malformed JSON payload." }, { status: 400 });
   }
 
   try {
     await connectDB();
+    const event = String(parsed.event || parsed.type || "").toLowerCase();
+    const data = (parsed.data || {}) as Record<string, unknown>;
+    const tracker = String(data.token || data.tracker || data.beacon || "").trim();
+    const orderId = String(data.order_id || parsed.order_id || "").trim();
+    const reference = String(data.reference || "").trim();
 
-    const eventType = String(
-      eventTypeHeader || payload?.type || payload?.event || ""
-    ).toLowerCase();
-    const data = payload?.data || payload || {};
-    const notification = data?.notification || data || {};
-
-    const tracker = String(
-      notification?.tracker || data?.tracker || data?.token || ""
-    ).trim();
-    const orderId = String(
-      notification?.metadata?.order_id ||
-        data?.metadata?.order_id ||
-        notification?.order_id ||
-        data?.order_id ||
-        ""
-    ).trim();
-    const reference = String(
-      notification?.reference || data?.reference || tracker
-    ).trim();
-    const state = String(
-      notification?.state || data?.state || ""
-    ).toUpperCase();
-
-    const isSuccessEvent =
-      eventType.includes("payment.completed") ||
-      eventType.includes("payment.succeeded") ||
-      eventType.includes("payment:created") ||
-      eventType.includes("payment.paid") ||
-      state === "PAID" ||
-      state === "TRACKER_ENDED";
-
-    const isFailureEvent =
-      eventType.includes("payment.failed") ||
-      eventType.includes("payment.canceled") ||
-      state === "FAILED" ||
-      state === "CANCELED";
-
-    if (isSuccessEvent && (tracker || orderId)) {
+    if (
+      event === "payment.completed" ||
+      event === "order.completed" ||
+      event === "order.paid"
+    ) {
       const result = await fulfillPaidSubscriptionOrder({
-        orderId,
-        tracker,
-        safepayReference: reference,
-        webhookEventId: eventIdHeader,
+        orderId: orderId || undefined,
+        tracker: tracker || undefined,
+        safepayReference: reference || undefined,
+        webhookEventId: String(parsed.id || parsed.notification_id || ""),
       });
-
-      return NextResponse.json({
-        received: true,
-        fulfilled: result.fulfilled,
-        alreadyPaid: result.alreadyPaid,
-      });
+      return NextResponse.json({ received: true, gateway: "safepay", event, ...result });
     }
 
-    if (isFailureEvent && (tracker || orderId)) {
-      const orConds: Record<string, unknown>[] = [];
-      if (tracker) orConds.push({ tracker });
-      if (orderId) orConds.push({ orderId });
-      await PaymentOrder.updateOne(
-        { $or: orConds, status: "pending" },
-        { $set: { status: "failed" } }
-      );
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("[SAFEPAY_WEBHOOK_PROCESS_ERROR]", error);
+    return NextResponse.json({ received: true, gateway: "safepay", event, ignored: true });
+  } catch (err) {
+    console.error("[SAFEPAY_WEBHOOK_ERROR]", err);
     return NextResponse.json(
-      { error: "Webhook processing error." },
+      { error: "Safepay webhook processing error." },
       { status: 500 }
     );
   }
